@@ -140,16 +140,19 @@ export default function PoolDashboard({ farms = [] }) {
         <p style={{ fontSize: "0.85rem", color: "var(--text-dim)", marginBottom: "1.25rem" }}>Support climate resilience for smallholder farmers worldwide.</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
           {[
-            { label: "As ONG / Grant", color: "#60a5fa", desc: "Impact reporting on-chain", fn: "fundAsONG()" },
-            { label: "As ESG Investor", color: "#f59e0b", desc: "~8% yield + impact", fn: "depositAsInvestor()" },
-            { label: "As Farmer", color: "#22c55e", desc: "Via @RainSafeHedera_bot", fn: "payPremium()" },
+            { label: "As ONG / Grant", color: "#60a5fa", desc: "Impact reporting on-chain", fn: "fundAsONG()", href: `https://hashscan.io/testnet/contract/${poolData.poolContractId}` },
+            { label: "As ESG Investor", color: "#f59e0b", desc: "~8% yield + impact", fn: "depositAsInvestor()", href: `https://hashscan.io/testnet/contract/${poolData.poolContractId}` },
+            { label: "As Farmer", color: "#22c55e", desc: "Via @RainSafeHedera_bot", fn: "payPremium()", href: "https://t.me/RainSafeHedera_bot" },
           ].map(cta => (
-            <div key={cta.label} style={{ background: "var(--bg3)", borderRadius: 12, padding: "1rem", textAlign: "center", border: `1px solid ${cta.color}33` }}>
+            <a key={cta.label} href={cta.href} target="_blank" rel="noreferrer" style={{ textDecoration: "none", background: "var(--bg3)", borderRadius: 12, padding: "1rem", textAlign: "center", border: `1px solid ${cta.color}33`, display: "block", transition: "border-color 0.2s", cursor: "pointer" }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = cta.color}
+              onMouseLeave={e => e.currentTarget.style.borderColor = `${cta.color}33`}
+            >
               <div style={{ fontWeight: 700, color: cta.color, marginBottom: 4, fontSize: "0.85rem" }}>{cta.label}</div>
               <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginBottom: 8 }}>{cta.desc}</div>
               <div style={{ fontSize: "0.68rem", fontFamily: "var(--mono)", color: cta.color, background: `${cta.color}22`, borderRadius: 6, padding: "3px 8px" }}>{cta.fn}</div>
-              <div style={{ fontSize: "0.65rem", fontFamily: "var(--mono)", color: "var(--text-dim)", marginTop: 4 }}>{poolData.poolContractId}</div>
-            </div>
+              <div style={{ fontSize: "0.65rem", fontFamily: "var(--mono)", color: "var(--text-dim)", marginTop: 4 }}>{cta.fn === "payPremium()" ? "@RainSafeHedera_bot" : poolData.poolContractId}</div>
+            </a>
           ))}
         </div>
       </div>

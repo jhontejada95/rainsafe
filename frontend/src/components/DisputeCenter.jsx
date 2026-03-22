@@ -1,36 +1,54 @@
 // DisputeCenter.jsx — Dispute resolution panel
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const MOCK_DISPUTES = [
-  {
-    id: 1, farmName: "Finca El Progreso", status: "pending",
-    reason: "Hubo sequía 10 días pero no recibí el pago",
-    raisedAt: "2026-03-15", arbitrator: null,
-  },
-];
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 export default function DisputeCenter({ farms }) {
-  const [disputes, setDisputes] = useState(MOCK_DISPUTES);
+  const [disputes, setDisputes] = useState([]);
   const [form, setForm] = useState({ farmId: "", reason: "" });
-  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState(null); // { success, hashscanUrl }
 
   const statusColor = { pending: "#f59e0b", resolved: "#22c55e", rejected: "#ef4444" };
   const statusLabel = { pending: "⏳ Pending Review", resolved: "✅ Resolved", rejected: "❌ Rejected" };
 
-  const submit = () => {
+  useEffect(() => {
+    fetch(`${API_URL}/api/disputes`)
+      .then(r => r.json())
+      .then(data => setDisputes(data))
+      .catch(() => {});
+  }, []);
+
+  const submit = async () => {
     if (!form.farmId || !form.reason.trim()) return;
+    setSubmitting(true);
+    setResult(null);
+
     const farm = farms.find(f => String(f.id) === form.farmId);
-    setDisputes(prev => [...prev, {
-      id: prev.length + 1,
-      farmName: farm?.name || `Farm #${form.farmId}`,
-      status: "pending",
-      reason: form.reason,
-      raisedAt: new Date().toISOString().split("T")[0],
-      arbitrator: null,
-    }]);
-    setForm({ farmId: "", reason: "" });
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
+
+    try {
+      const res = await fetch(`${API_URL}/api/disputes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          farmId: form.farmId,
+          farmName: farm?.name || `Farm #${form.farmId}`,
+          reason: form.reason,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDisputes(prev => [...prev, data.dispute]);
+        setResult({ success: true, hashscanUrl: data.dispute.hashscanUrl });
+        setForm({ farmId: "", reason: "" });
+      } else {
+        setResult({ success: false });
+      }
+    } catch {
+      setResult({ success: false });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -70,23 +88,34 @@ export default function DisputeCenter({ farms }) {
             />
           </div>
 
-          {submitted ? (
+          {result?.success ? (
             <div style={{ background: "var(--green-glow)", border: "1px solid var(--green)", borderRadius: 10, padding: "12px 16px", color: "var(--green)", fontWeight: 600, fontSize: "0.9rem" }}>
               ✅ Dispute recorded on-chain. Arbitrators notified.
+              {result.hashscanUrl && (
+                <div style={{ marginTop: 6, fontSize: "0.78rem", fontWeight: 400 }}>
+                  <a href={result.hashscanUrl} target="_blank" rel="noreferrer" style={{ color: "var(--green)" }}>
+                    🔗 View transaction on HashScan →
+                  </a>
+                </div>
+              )}
+            </div>
+          ) : result?.success === false ? (
+            <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid #ef4444", borderRadius: 10, padding: "12px 16px", color: "#ef4444", fontSize: "0.9rem" }}>
+              ❌ Could not submit dispute. Check API connection and try again.
             </div>
           ) : (
             <button
               onClick={submit}
-              disabled={!form.farmId || !form.reason.trim()}
-              style={{ background: form.farmId && form.reason.trim() ? "var(--amber)" : "var(--bg3)", color: form.farmId && form.reason.trim() ? "#000" : "var(--text-dim)", border: "none", borderRadius: 10, padding: "12px", fontFamily: "var(--font)", fontSize: "0.95rem", fontWeight: 700, cursor: form.farmId && form.reason.trim() ? "pointer" : "not-allowed", transition: "all 0.2s" }}
+              disabled={!form.farmId || !form.reason.trim() || submitting}
+              style={{ background: form.farmId && form.reason.trim() && !submitting ? "var(--amber)" : "var(--bg3)", color: form.farmId && form.reason.trim() && !submitting ? "#000" : "var(--text-dim)", border: "none", borderRadius: 10, padding: "12px", fontFamily: "var(--font)", fontSize: "0.95rem", fontWeight: 700, cursor: form.farmId && form.reason.trim() && !submitting ? "pointer" : "not-allowed", transition: "all 0.2s" }}
             >
-              Submit Dispute →
+              {submitting ? "⏳ Submitting on-chain..." : "Submit Dispute →"}
             </button>
           )}
         </div>
 
         <div style={{ marginTop: "1rem", padding: "12px", background: "var(--bg3)", borderRadius: 8, fontSize: "0.75rem", color: "var(--text-dim)", fontFamily: "var(--mono)" }}>
-          ℹ️ Disputes are recorded permanently on Hedera Consensus Service. False disputes may affect your Climate Resilience Score. Resolution takes 3 business days.
+          ℹ️ Disputes are recorded permanently on Hedera. False disputes may affect your Climate Resilience Score. Resolution takes 3 business days.
         </div>
       </div>
 
@@ -98,14 +127,19 @@ export default function DisputeCenter({ farms }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {disputes.map(d => (
-              <div key={d.id} style={{ background: "var(--bg3)", borderRadius: 12, padding: "1rem", borderLeft: `3px solid ${statusColor[d.status]}` }}>
+              <div key={d.id} style={{ background: "var(--bg3)", borderRadius: 12, padding: "1rem", borderLeft: `3px solid ${statusColor[d.status] || "#f59e0b"}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>{d.farmName}</span>
-                  <span style={{ fontSize: "0.72rem", fontFamily: "var(--mono)", color: statusColor[d.status] }}>{statusLabel[d.status]}</span>
+                  <span style={{ fontSize: "0.72rem", fontFamily: "var(--mono)", color: statusColor[d.status] || "#f59e0b" }}>{statusLabel[d.status] || "⏳ Pending"}</span>
                 </div>
                 <p style={{ fontSize: "0.82rem", color: "var(--text-dim)", marginBottom: 6 }}>{d.reason}</p>
-                <div style={{ fontSize: "0.7rem", fontFamily: "var(--mono)", color: "var(--text-dim)" }}>
-                  Filed: {d.raisedAt} · On-chain: HCS #{1000 + d.id}
+                <div style={{ fontSize: "0.7rem", fontFamily: "var(--mono)", color: "var(--text-dim)", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                  <span>Filed: {new Date(d.raisedAt).toLocaleDateString()}</span>
+                  {d.hashscanUrl ? (
+                    <a href={d.hashscanUrl} target="_blank" rel="noreferrer" style={{ color: "var(--green)" }}>🔗 On-chain proof</a>
+                  ) : (
+                    <span>On-chain: pending</span>
+                  )}
                 </div>
               </div>
             ))}

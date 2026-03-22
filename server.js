@@ -6,19 +6,32 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const cors = require("cors");
+const { raiseDisputeOnChain } = require("./agent/hedera");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const FARMS_FILE = path.join(__dirname, "../data/farms.json");
+const FARMS_FILE = path.join(__dirname, "data/farms.json");
+const DISPUTES_FILE = path.join(__dirname, "data/disputes.json");
 
 // ─── Ensure data directory exists ─────────────────────────────────────────────
 
 function ensureDataDir() {
-  const dir = path.join(__dirname, "../data");
+  const dir = path.join(__dirname, "data");
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   if (!fs.existsSync(FARMS_FILE)) fs.writeFileSync(FARMS_FILE, JSON.stringify([]));
+  if (!fs.existsSync(DISPUTES_FILE)) fs.writeFileSync(DISPUTES_FILE, JSON.stringify([]));
+}
+
+function readDisputes() {
+  ensureDataDir();
+  try { return JSON.parse(fs.readFileSync(DISPUTES_FILE, "utf8")); } catch { return []; }
+}
+
+function writeDisputes(disputes) {
+  ensureDataDir();
+  fs.writeFileSync(DISPUTES_FILE, JSON.stringify(disputes, null, 2));
 }
 
 function readFarms() {
@@ -76,9 +89,50 @@ app.delete("/api/farms/:id", (req, res) => {
   res.json({ success: true });
 });
 
+// GET all disputes
+app.get("/api/disputes", (req, res) => {
+  res.json(readDisputes());
+});
+
+// POST raise dispute (called by dashboard or bot)
+app.post("/api/disputes", async (req, res) => {
+  const { farmId, farmName, reason } = req.body;
+  if (!reason) return res.status(400).json({ error: "reason required" });
+
+  const dispute = {
+    id: Date.now(),
+    farmId: farmId ?? null,
+    farmName: farmName || `Farm #${farmId}`,
+    reason,
+    status: "pending",
+    raisedAt: new Date().toISOString(),
+    txId: null,
+    hashscanUrl: null,
+  };
+
+  // Try to record on-chain
+  const onChainId = parseInt(farmId) || 0;
+  try {
+    const result = await raiseDisputeOnChain(onChainId, reason);
+    if (result) {
+      dispute.txId = result.txId;
+      dispute.hashscanUrl = result.hashscanUrl;
+    }
+  } catch (e) {
+    console.warn("On-chain dispute skipped:", e.message);
+  }
+
+  const disputes = readDisputes();
+  disputes.push(dispute);
+  writeDisputes(disputes);
+
+  console.log(`⚖️  Dispute filed: ${dispute.farmName} — "${reason}"`);
+  res.json({ success: true, dispute });
+});
+
 // Health check
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", farms: readFarms().length });
+  res.json({ status: "ok", farms: readFarms().length, disputes: readDisputes().length });
 });
 
 const PORT = process.env.API_PORT || 3001;

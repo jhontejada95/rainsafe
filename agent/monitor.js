@@ -2,6 +2,8 @@
 // Monitors registered farms, detects climate events, triggers payouts
 
 require("dotenv").config();
+const fs = require("fs");
+const path = require("path");
 const { evaluateClimateCondition } = require("./weather");
 const {
   recordClimateEventHCS,
@@ -9,37 +11,35 @@ const {
   updateResilienceScore,
 } = require("./hedera");
 
-// ─── Mock farm registry ───────────────────────────────────────────────────────
+// ─── Farm registry — reads from farms.json (real registered farms) ────────────
 
-const FARMS = [
-  {
-    id: 0,
-    name: "Finca El Progreso",
-    location: "Bogotá, Colombia",
-    latitude: 4.711,
-    longitude: -74.0721,
-    hcsTopicId: process.env.HCS_TOPIC_FARM_0 || null,
-    coverageHbar: 100,
-  },
-  {
-    id: 1,
-    name: "Rancho Las Palmas",
-    location: "Caracas, Venezuela",
-    latitude: 10.4806,
-    longitude: -66.9036,
-    hcsTopicId: process.env.HCS_TOPIC_FARM_1 || null,
-    coverageHbar: 100,
-  },
-  {
-    id: 2,
-    name: "Parcela San Miguel",
-    location: "Oaxaca, México",
-    latitude: 17.0732,
-    longitude: -96.7266,
-    hcsTopicId: process.env.HCS_TOPIC_FARM_2 || null,
-    coverageHbar: 100,
-  },
+const FARMS_FILE = path.join(__dirname, "../data/farms.json");
+
+const FALLBACK_FARMS = [
+  { id: 0, name: "Finca El Progreso", location: "Bogotá, Colombia", latitude: 4.711, longitude: -74.0721, hcsTopicId: process.env.HCS_TOPIC_FARM_0 || null, coverageHbar: 100 },
+  { id: 1, name: "Rancho Las Palmas", location: "Caracas, Venezuela", latitude: 10.4806, longitude: -66.9036, hcsTopicId: process.env.HCS_TOPIC_FARM_1 || null, coverageHbar: 100 },
+  { id: 2, name: "Parcela San Miguel", location: "Oaxaca, México", latitude: 17.0732, longitude: -96.7266, hcsTopicId: process.env.HCS_TOPIC_FARM_2 || null, coverageHbar: 100 },
 ];
+
+function loadFarms() {
+  try {
+    if (!fs.existsSync(FARMS_FILE)) return FALLBACK_FARMS;
+    const raw = JSON.parse(fs.readFileSync(FARMS_FILE, "utf8"));
+    if (!raw.length) return FALLBACK_FARMS;
+    return raw.map((f, i) => ({
+      id: f.onChainId ?? i,
+      name: f.name,
+      location: f.location,
+      latitude: parseFloat(f.lat || f.latitude || 0),
+      longitude: parseFloat(f.lon || f.lng || f.longitude || 0),
+      hcsTopicId: process.env.HCS_TOPIC_FARM_0 || null,
+      coverageHbar: f.coverage || f.coverageHbar || 100,
+    })).filter(f => f.latitude !== 0 || f.longitude !== 0);
+  } catch (e) {
+    console.warn("⚠️  Could not load farms.json, using fallback:", e.message);
+    return FALLBACK_FARMS;
+  }
+}
 
 const processedEvents = new Set();
 
@@ -147,8 +147,10 @@ async function runMonitorCycle(eventHistory = []) {
   console.log(`🔄 RainSafe Monitor — ${new Date().toISOString()}`);
   console.log("═".repeat(50));
 
+  const farms = loadFarms();
+  console.log(`📋 Monitoring ${farms.length} farm(s) from registry`);
   const results = [];
-  for (const farm of FARMS) {
+  for (const farm of farms) {
     const result = await monitorFarm(farm, eventHistory);
     results.push(result);
     await new Promise((r) => setTimeout(r, 1000));
