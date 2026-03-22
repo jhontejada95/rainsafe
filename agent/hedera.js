@@ -59,6 +59,10 @@ function walletToEvmAddress(walletStr) {
   return AccountId.fromString(process.env.HEDERA_ACCOUNT_ID).toSolidityAddress();
 }
 
+function hashscanTxUrl(txId) {
+  return `https://hashscan.io/testnet/transaction/${txId.replace("@", "-").replace(/\./g, "-")}`;
+}
+
 async function registerFarmOnChain(farmData) {
   if (!process.env.CONTRACT_ID) return null;
   try {
@@ -101,7 +105,7 @@ async function registerFarmOnChain(farmData) {
 
     const receipt = await tx.getReceipt(client);
     const txId = tx.transactionId.toString();
-    const hashscanUrl = `https://hashscan.io/testnet/transaction/${txId.replace("@", "-").replace(/\./g, "-")}`;
+    const hashscanUrl = hashscanTxUrl(txId);
 
     console.log(`✅ Farm registered on-chain!`);
     console.log(`   TX: ${txId}`);
@@ -121,7 +125,7 @@ async function registerFarmOnChain(farmData) {
       });
     }
 
-    return { txId, hashscanUrl: `https://hashscan.io/testnet/contract/${process.env.CONTRACT_ID}`, status: receipt.status.toString(), parcelHash };
+    return { txId, hashscanUrl, status: receipt.status.toString(), parcelHash };
 
   } catch (err) {
     console.error(`❌ On-chain registration failed: ${err.message}`);
@@ -159,7 +163,7 @@ async function raiseDisputeOnChain(farmId, reason) {
       .execute(client);
     const txId = tx.transactionId.toString();
     console.log(`⚖️  Dispute raised on-chain. TX: ${txId}`);
-    const hashscanUrl = `https://hashscan.io/testnet/transaction/${txId.replace("@", "-").replace(/\./g, "-")}`;
+    const hashscanUrl = hashscanTxUrl(txId);
     return { txId, hashscanUrl };
   } catch (err) {
     console.log(`⚠️  Dispute skipped: ${err.message}`);
