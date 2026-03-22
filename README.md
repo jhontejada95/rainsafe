@@ -25,8 +25,8 @@
 | 🤖 Telegram Bot | [@RainSafeHedera_bot](https://t.me/RainSafeHedera_bot) — ES · EN · PT |
 | 📊 Dashboard | [rainsafe-frontend.vercel.app](https://rainsafe-frontend.vercel.app) |
 | 🌐 Landing Page | [jhontejada95.github.io/rainsafe](https://jhontejada95.github.io/rainsafe) |
-| 🔗 Core Contract v2 | [0.0.8329786](https://hashscan.io/testnet/contract/0.0.8329786) |
-| 🔗 Pool Contract v2 | [0.0.8329792](https://hashscan.io/testnet/contract/0.0.8329792) |
+| 🔗 Core Contract v3 | [0.0.8329786](https://hashscan.io/testnet/contract/0.0.8329786) |
+| 🔗 Pool Contract v3 | [0.0.8329792](https://hashscan.io/testnet/contract/0.0.8329792) |
 | 📝 HCS Topics | 0.0.8329793 · 0.0.8329794 · 0.0.8329795 |
 
 ---
@@ -139,7 +139,7 @@ The bot auto-detects language from Telegram's `language_code` and supports manua
 2. Location (Google Maps link / pin / coordinates)
 3. Coverage: 50 / 100 / 200 HBAR
 4. GPS photo verification
-5. HashPack wallet (`0.0.XXXXXXX`) or EVM address
+5. HashPack wallet (`0.0.XXXXXXX`) or EVM address — auto-created if none
 
 ---
 
@@ -178,6 +178,8 @@ Farmers can raise disputes via `/disputa` command or the web dashboard. All disp
 - Dispute mechanism (on-chain record)
 - Multilingual dashboard
 - Smart contract payouts on Hedera testnet
+- Auto wallet creation for unbanked farmers (Hedera AccountCreateTransaction)
+- Payouts sent directly to farmer wallet (on-chain)
 
 ### 🔄 Phase 2 — Actuarial Calibration
 - Historical drought analysis by region (10-year data)
