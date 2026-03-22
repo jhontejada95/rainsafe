@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RainSafe — Parametric Climate Insurance on Hedera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,700;0,900;1,300;1,700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #080b08;
+    --green: #1db954;
+    --green-light: #4ade80;
+    --green-pale: rgba(29,185,84,0.08);
+    --green-border: rgba(29,185,84,0.2);
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --blue: #60a5fa;
+    --white: #f0f7f0;
+    --white-dim: rgba(240,247,240,0.5);
+    --white-faint: rgba(240,247,240,0.08);
+    --font-display: 'Fraunces', serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: var(--font-mono);
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    width: 12px; height: 12px;
+    background: var(--green);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    mix-blend-mode: screen;
+  }
+  .cursor-ring {
+    width: 36px; height: 36px;
+    border: 1px solid var(--green);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    transition: all 0.08s ease;
+    opacity: 0.4;
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* Nav */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 1.5rem 3rem;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--green-border);
+    background: rgba(8,11,8,0.85);
+    backdrop-filter: blur(20px);
+  }
+
+  .nav-logo {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: var(--green);
+    letter-spacing: -0.03em;
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none;
+  }
+
+  .nav-badge {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    background: var(--green-pale);
+    border: 1px solid var(--green-border);
+    color: var(--green);
+    padding: 2px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.1em;
+  }
+
+  .nav-links {
+    display: flex; gap: 2rem; align-items: center;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--white-dim);
+    text-decoration: none;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--green); }
+
+  .nav-cta {
+    background: var(--green) !important;
+    color: var(--black) !important;
+    padding: 8px 20px !important;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: opacity 0.2s !important;
+  }
+  .nav-cta:hover { opacity: 0.85; }
+
+  /* Hero */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: flex-start;
+    padding: 8rem 3rem 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(var(--green-border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--green-border) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse at center, black 20%, transparent 80%);
+    opacity: 0.3;
+  }
+
+  .hero-tag {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--green);
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+    display: flex; align-items: center; gap: 12px;
+  }
+
+  .hero-tag::before {
+    content: '';
+    width: 40px; height: 1px;
+    background: var(--green);
+  }
+
+  .hero-title {
+    font-family: var(--font-display);
+    font-size: clamp(3.5rem, 8vw, 7rem);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    margin-bottom: 2rem;
+    max-width: 900px;
+  }
+
+  .hero-title em {
+    font-style: italic;
+    color: var(--green);
+  }
+
+  .hero-subtitle {
+    font-size: 1rem;
+    color: var(--white-dim);
+    max-width: 560px;
+    line-height: 1.7;
+    margin-bottom: 3rem;
+    font-weight: 300;
+  }
+
+  .hero-actions {
+    display: flex; gap: 1rem; flex-wrap: wrap;
+    margin-bottom: 5rem;
+  }
+
+  .btn-primary {
+    background: var(--green);
+    color: var(--black);
+    padding: 14px 32px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary:hover { opacity: 0.85; transform: translateY(-2px); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--white);
+    padding: 14px 32px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    border: 1px solid var(--green-border);
+    text-decoration: none;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+  .btn-secondary:hover {
+    border-color: var(--green);
+    color: var(--green);
+    transform: translateY(-2px);
+  }
+
+  .hero-stats {
+    display: flex; gap: 3rem;
+  }
+
+  .hero-stat-value {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: var(--green);
+    line-height: 1;
+  }
+
+  .hero-stat-label {
+    font-size: 0.7rem;
+    color: var(--white-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* Live indicator */
+  .live-badge {
+    position: absolute; top: 7rem; right: 3rem;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.7rem; color: var(--green);
+    letter-spacing: 0.1em;
+    border: 1px solid var(--green-border);
+    padding: 6px 14px; border-radius: 100px;
+    background: var(--green-pale);
+  }
+
+  .live-dot {
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  /* Section base */
+  section {
+    padding: 6rem 3rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-tag {
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    color: var(--green);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-tag::before {
+    content: '//';
+    opacity: 0.5;
+  }
+
+  .section-title {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+  }
+
+  .section-title em { font-style: italic; color: var(--green); }
+
+  /* Problem */
+  .problem-section {
+    border-top: 1px solid var(--green-border);
+  }
+
+  .problem-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    margin-top: 3rem;
+    align-items: center;
+  }
+
+  .problem-text {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: var(--white-dim);
+    font-weight: 300;
+  }
+
+  .problem-text strong { color: var(--white); font-weight: 500; }
+
+  .problem-numbers {
+    display: flex; flex-direction: column; gap: 1.5rem;
+  }
+
+  .problem-number {
+    padding: 1.5rem;
+    border: 1px solid var(--green-border);
+    border-radius: 8px;
+    background: var(--green-pale);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .problem-number::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--green);
+  }
+
+  .problem-number-value {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: var(--green);
+    line-height: 1;
+  }
+
+  .problem-number-label {
+    font-size: 0.8rem;
+    color: var(--white-dim);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  /* How it works */
+  .how-section {
+    border-top: 1px solid var(--green-border);
+  }
+
+  .stakeholders {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 3rem;
+  }
+
+  .stakeholder {
+    border: 1px solid var(--green-border);
+    border-radius: 12px;
+    padding: 2rem;
+    background: var(--white-faint);
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+
+  .stakeholder:hover {
+    border-color: var(--green);
+    transform: translateY(-4px);
+  }
+
+  .stakeholder-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+
+  .stakeholder-role {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 0.5rem;
+  }
+
+  .stakeholder-title {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+  }
+
+  .stakeholder-steps {
+    list-style: none;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  .stakeholder-steps li {
+    font-size: 0.8rem;
+    color: var(--white-dim);
+    display: flex; gap: 10px; align-items: flex-start;
+    line-height: 1.5;
+  }
+
+  .step-num {
+    color: var(--green);
+    font-weight: 500;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+  }
+
+  /* Flow diagram */
+  .flow-section {
+    border-top: 1px solid var(--green-border);
+  }
+
+  .flow-diagram {
+    margin-top: 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .flow-step {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 2rem;
+    align-items: start;
+    position: relative;
+  }
+
+  .flow-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 39px;
+    top: 48px;
+    width: 1px;
+    height: calc(100% + 0px);
+    background: var(--green-border);
+  }
+
+  .flow-num {
+    width: 48px; height: 48px;
+    border: 1px solid var(--green);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--green);
+    background: var(--green-pale);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .flow-content {
+    padding: 0.75rem 0 2.5rem;
+  }
+
+  .flow-title {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+  }
+
+  .flow-desc {
+    font-size: 0.8rem;
+    color: var(--white-dim);
+    line-height: 1.6;
+    max-width: 500px;
+  }
+
+  .flow-tech {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    color: var(--green);
+    background: var(--green-pale);
+    border: 1px solid var(--green-border);
+    padding: 2px 10px;
+    border-radius: 3px;
+  }
+
+  /* Pool section */
+  .pool-section {
+    border-top: 1px solid var(--green-border);
+  }
+
+  .pool-tiers {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 3rem;
+  }
+
+  .pool-tier {
+    padding: 1.5rem;
+    border-radius: 10px;
+    border: 1px solid;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pool-tier-1 { border-color: rgba(96,165,250,0.3); background: rgba(96,165,250,0.05); }
+  .pool-tier-2 { border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.05); }
+  .pool-tier-3 { border-color: rgba(29,185,84,0.3); background: rgba(29,185,84,0.05); }
+
+  .tier-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .pool-tier-1 .tier-label { color: var(--blue); }
+  .pool-tier-2 .tier-label { color: var(--amber); }
+  .pool-tier-3 .tier-label { color: var(--green); }
+
+  .tier-title {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+  }
+
+  .tier-desc {
+    font-size: 0.78rem;
+    color: var(--white-dim);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  .tier-return {
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+  .pool-tier-1 .tier-return { background: rgba(96,165,250,0.1); color: var(--blue); }
+  .pool-tier-2 .tier-return { background: rgba(245,158,11,0.1); color: var(--amber); }
+  .pool-tier-3 .tier-return { background: rgba(29,185,84,0.1); color: var(--green); }
+
+  /* Business model */
+  .business-section {
+    border-top: 1px solid var(--green-border);
+  }
+
+  .revenue-streams {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-top: 3rem;
+  }
+
+  .revenue-card {
+    padding: 1.75rem;
+    border: 1px solid var(--green-border);
+    border-radius: 10px;
+    background: var(--white-faint);
+    transition: border-color 0.3s;
+  }
+  .revenue-card:hover { border-color: var(--green); }
+
+  .revenue-icon { font-size: 2rem; margin-bottom: 1rem; display: block; }
+
+  .revenue-title {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .revenue-desc {
+    font-size: 0.8rem;
+    color: var(--white-dim);
+    line-height: 1.6;
+    margin-bottom: 0.75rem;
+  }
+
+  .revenue-number {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--green);
+    padding: 4px 10px;
+    background: var(--green-pale);
+    border-radius: 3px;
+    display: inline-block;
+  }
+
+  /* Anti-fraud */
+  .security-section {
+    border-top: 1px solid var(--green-border);
+  }
+
+  .fraud-layers {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-top: 3rem;
+  }
+
+  .fraud-layer {
+    padding: 1.5rem;
+    border: 1px solid var(--green-border);
+    border-radius: 10px;
+    display: flex; gap: 1rem; align-items: flex-start;
+  }
+
+  .fraud-layer-letter {
+    width: 36px; height: 36px;
+    background: var(--green);
+    color: var(--black);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+
+  .fraud-layer-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .fraud-layer-desc {
+    font-size: 0.75rem;
+    color: var(--white-dim);
+    line-height: 1.5;
+  }
+
+  /* Tech stack */
+  .tech-section {
+    border-top: 1px solid var(--green-border);
+  }
+
+  .tech-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-top: 3rem;
+  }
+
+  .tech-card {
+    padding: 1.25rem;
+    border: 1px solid var(--green-border);
+    border-radius: 8px;
+    text-align: center;
+    background: var(--white-faint);
+    transition: all 0.3s;
+  }
+  .tech-card:hover {
+    border-color: var(--green);
+    background: var(--green-pale);
+  }
+
+  .tech-card-icon { font-size: 1.75rem; display: block; margin-bottom: 8px; }
+  .tech-card-name { font-size: 0.85rem; font-weight: 500; margin-bottom: 4px; }
+  .tech-card-desc { font-size: 0.7rem; color: var(--white-dim); line-height: 1.4; }
+
+  /* CTA */
+  .cta-section {
+    border-top: 1px solid var(--green-border);
+    text-align: center;
+    padding-top: 6rem;
+    padding-bottom: 6rem;
+  }
+
+  .cta-title {
+    font-family: var(--font-display);
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+  }
+
+  .cta-title em { font-style: italic; color: var(--green); }
+
+  .cta-subtitle {
+    font-size: 0.9rem;
+    color: var(--white-dim);
+    max-width: 500px;
+    margin: 0 auto 2.5rem;
+    line-height: 1.7;
+  }
+
+  .cta-actions {
+    display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
+    margin-bottom: 3rem;
+  }
+
+  .contracts-row {
+    display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;
+  }
+
+  .contract-tag {
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    color: var(--white-dim);
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .contract-tag a {
+    color: var(--green);
+    text-decoration: none;
+  }
+  .contract-tag a:hover { text-decoration: underline; }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--green-border);
+    padding: 2rem 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--white-dim);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .footer-logo {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 900;
+    color: var(--green);
+  }
+
+  /* Animations */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    nav { padding: 1rem 1.5rem; }
+    .nav-links { display: none; }
+    .hero { padding: 6rem 1.5rem 3rem; }
+    section { padding: 4rem 1.5rem; }
+    .problem-grid { grid-template-columns: 1fr; }
+    .stakeholders { grid-template-columns: 1fr; }
+    .pool-tiers { grid-template-columns: 1fr; }
+    .revenue-streams { grid-template-columns: 1fr; }
+    .fraud-layers { grid-template-columns: 1fr; }
+    .tech-grid { grid-template-columns: repeat(2, 1fr); }
+    .hero-stats { flex-wrap: wrap; gap: 1.5rem; }
+    footer { flex-direction: column; gap: 1rem; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- Nav -->
+<nav>
+  <a href="#" class="nav-logo">
+    🌧️ RainSafe
+    <span class="nav-badge">TESTNET</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="https://rainsafe-frontend.vercel.app" target="_blank" class="nav-cta">📊 Dashboard</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#pool">Pool</a></li>
+    <li><a href="#security">Security</a></li>
+    <li><a href="#tech">Tech</a></li>
+    <li><a href="https://t.me/RainSafeHedera_bot" class="nav-cta">Try the Bot →</a></li>
+  </ul>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-grid"></div>
+
+  <div class="live-badge">
+    <span class="live-dot"></span>
+    LIVE ON HEDERA TESTNET
+  </div>
+
+  <div class="hero-tag fade-in">Hedera Hello Future Apex 2026</div>
+
+  <h1 class="hero-title fade-in">
+    Climate insurance<br>
+    for farmers who <em>can't</em><br>
+    afford to wait.
+  </h1>
+
+  <p class="hero-subtitle fade-in">
+    RainSafe is a parametric insurance protocol on Hedera. When drought strikes, farmers get paid automatically — no adjusters, no paperwork, no banks. Just real weather data and instant HBAR payouts.
+  </p>
+
+  <div class="hero-actions fade-in">
+    <a href="https://rainsafe-frontend.vercel.app" target="_blank" class="btn-primary">📊 Live Dashboard</a>
+    <a href="https://t.me/RainSafeHedera_bot" class="btn-primary">
+      🌱 Register your farm
+    </a>
+    <a href="https://github.com/jhontejada95/rainsafe" class="btn-secondary">
+      View on GitHub →
+    </a>
+  </div>
+
+  <div class="hero-stats fade-in">
+    <div>
+      <div class="hero-stat-value">$700B</div>
+      <div class="hero-stat-label">Annual biodiversity finance gap</div>
+    </div>
+    <div>
+      <div class="hero-stat-value">500M+</div>
+      <div class="hero-stat-label">Smallholder farmers uninsured</div>
+    </div>
+    <div>
+      <div class="hero-stat-value">$0.09</div>
+      <div class="hero-stat-label">HBAR today · payouts in seconds</div>
+    </div>
+  </div>
+</div>
+
+<!-- Problem -->
+<section class="problem-section" id="problem">
+  <div class="section-tag">The Problem</div>
+  <h2 class="section-title fade-in">
+    Traditional insurance<br>
+    <em>fails</em> farmers.
+  </h2>
+
+  <div class="problem-grid">
+    <div class="problem-text fade-in">
+      A smallholder farmer in Colombia loses their harvest to drought. They file an insurance claim. Months later, after an adjuster visits, documents are reviewed and bureaucracy navigated, they might receive a partial payout — <strong>long after they needed it.</strong>
+      <br><br>
+      Most farmers don't even try. Insurance is expensive, complex, and designed for large agribusinesses. <strong>500 million smallholder farmers worldwide have zero climate protection.</strong>
+      <br><br>
+      RainSafe changes this. If rainfall drops below 5mm in 7 days, the payout happens automatically. No humans in the loop.
+    </div>
+
+    <div class="problem-numbers fade-in">
+      <div class="problem-number">
+        <div class="problem-number-value">72%</div>
+        <div class="problem-number-label">of climate disasters affect agriculture — the most exposed sector with the least protection</div>
+      </div>
+      <div class="problem-number">
+        <div class="problem-number-value">4–6mo</div>
+        <div class="problem-number-label">average time for traditional insurance to pay out after a climate event</div>
+      </div>
+      <div class="problem-number">
+        <div class="problem-number-value">&lt;5s</div>
+        <div class="problem-number-label">time for RainSafe to detect drought and initiate automatic payout on Hedera</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section class="how-section" id="how">
+  <div class="section-tag">Stakeholders</div>
+  <h2 class="section-title fade-in">Built for <em>everyone</em><br>in the value chain.</h2>
+
+  <div class="stakeholders">
+    <div class="stakeholder fade-in">
+      <span class="stakeholder-icon">🌱</span>
+      <div class="stakeholder-role">Farmer</div>
+      <div class="stakeholder-title">Register & get covered</div>
+      <ul class="stakeholder-steps">
+        <li><span class="step-num">01</span> Open Telegram, find @RainSafeHedera_bot</li>
+        <li><span class="step-num">02</span> Register your farm — name + Google Maps link</li>
+        <li><span class="step-num">03</span> Take a photo from your farm (GPS verification)</li>
+        <li><span class="step-num">04</span> Connect your HashPack wallet</li>
+        <li><span class="step-num">05</span> Coverage activates in 72h — automatic from here</li>
+      </ul>
+    </div>
+
+    <div class="stakeholder fade-in">
+      <span class="stakeholder-icon">🤝</span>
+      <div class="stakeholder-role">ONG / Grant Provider</div>
+      <div class="stakeholder-title">Fund with verified impact</div>
+      <ul class="stakeholder-steps">
+        <li><span class="step-num">01</span> Deposit HBAR into the RainSafePool contract</li>
+        <li><span class="step-num">02</span> Your capital forms Tier 1 (first loss protection)</li>
+        <li><span class="step-num">03</span> Every payout is recorded on Hedera Consensus Service</li>
+        <li><span class="step-num">04</span> Export immutable impact reports — farmers covered, events detected, payouts executed</li>
+        <li><span class="step-num">05</span> No intermediaries. Every dollar tracked on-chain.</li>
+      </ul>
+    </div>
+
+    <div class="stakeholder fade-in">
+      <span class="stakeholder-icon">📈</span>
+      <div class="stakeholder-role">ESG Investor</div>
+      <div class="stakeholder-title">Earn yield with purpose</div>
+      <ul class="stakeholder-steps">
+        <li><span class="step-num">01</span> Deposit capital as Tier 2 (mezzanine layer)</li>
+        <li><span class="step-num">02</span> Earn ~8% annual yield from unclaimed premiums</li>
+        <li><span class="step-num">03</span> Capital earns additional DeFi yield while waiting</li>
+        <li><span class="step-num">04</span> Withdraw at any time with on-chain proof of impact</li>
+        <li><span class="step-num">05</span> Risk mitigated by geographic pool diversification</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Flow -->
+<section class="flow-section">
+  <div class="section-tag">How it works</div>
+  <h2 class="section-title fade-in">From rain data<br>to <em>wallet payout</em>.</h2>
+
+  <div class="flow-diagram" style="margin-top:3rem; max-width: 700px;">
+    <div class="flow-step fade-in">
+      <div class="flow-num">01</div>
+      <div class="flow-content">
+        <div class="flow-title">Farmer registers via Telegram</div>
+        <div class="flow-desc">No wallet required to start. Name + Google Maps link + photo from the farm. The bot extracts GPS coordinates automatically.</div>
+        <span class="flow-tech">@RainSafeHedera_bot · No blockchain knowledge needed</span>
+      </div>
+    </div>
+    <div class="flow-step fade-in">
+      <div class="flow-num">02</div>
+      <div class="flow-content">
+        <div class="flow-title">Anti-fraud verification runs</div>
+        <div class="flow-desc">4 layers: parcel hash on HCS (no duplicates), 72h cooldown (no timing fraud), GPS photo verification (physical presence), area limit (no mass claims).</div>
+        <span class="flow-tech">Hedera Consensus Service · C1+C2+C3+C4</span>
+      </div>
+    </div>
+    <div class="flow-step fade-in">
+      <div class="flow-num">03</div>
+      <div class="flow-content">
+        <div class="flow-title">Agent monitors climate 24/7</div>
+        <div class="flow-desc">Open-Meteo API provides real rainfall data every 6 hours. No API key needed. Global coverage. If rainfall drops below 5mm in 7 days → drought alert.</div>
+        <span class="flow-tech">Open-Meteo · Node.js agent · Real data</span>
+      </div>
+    </div>
+    <div class="flow-step fade-in">
+      <div class="flow-num">04</div>
+      <div class="flow-content">
+        <div class="flow-title">Event recorded on HCS</div>
+        <div class="flow-desc">The climate event is submitted to Hedera Consensus Service before any payout. Creates an immutable, tamper-proof record that anyone can verify.</div>
+        <span class="flow-tech">Hedera Consensus Service · Immutable proof</span>
+      </div>
+    </div>
+    <div class="flow-step fade-in">
+      <div class="flow-num">05</div>
+      <div class="flow-content">
+        <div class="flow-title">Automatic payout to farmer's wallet</div>
+        <div class="flow-desc">Smart contract executes instantly. HBAR goes directly to the farmer's HashPack wallet. No adjuster. No claim form. No waiting.</div>
+        <span class="flow-tech">Hedera Smart Contract Service · &lt;5 seconds</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pool -->
+<section class="pool-section" id="pool">
+  <div class="section-tag">Insurance Pool</div>
+  <h2 class="section-title fade-in">A <em>multi-source</em><br>pool that never sleeps.</h2>
+
+  <div class="pool-tiers">
+    <div class="pool-tier pool-tier-1 fade-in">
+      <div class="tier-label">Tier 1 — First Loss</div>
+      <div class="tier-title">ONGs & Grants</div>
+      <div class="tier-desc">CGIAR, GIZ, HBAR Foundation, impact funds. Capital deployed as first protection layer. Absorbs initial claims, enabling lower premiums for farmers.</div>
+      <span class="tier-return">Impact reports on-chain · No financial return expected</span>
+    </div>
+
+    <div class="pool-tier pool-tier-2 fade-in">
+      <div class="tier-label">Tier 2 — Mezzanine</div>
+      <div class="tier-title">ESG Investors</div>
+      <div class="tier-desc">Capital enters after Tier 1 protection. Earns yield from unclaimed premiums + DeFi yield while capital waits. Risk mitigated by geographic diversification.</div>
+      <span class="tier-return">~12% annual yield · Measurable impact</span>
+    </div>
+
+    <div class="pool-tier pool-tier-3 fade-in">
+      <div class="tier-label">Tier 3 — Continuous</div>
+      <div class="tier-title">Farmer Premiums</div>
+      <div class="tier-desc">10% of coverage amount paid as premium. 100 farmers × 10 HBAR/month = 1,000 HBAR/month flowing into the pool. Self-sustaining at scale.</div>
+      <span class="tier-return">Actuarially viable at 15–20% drought frequency</span>
+    </div>
+  </div>
+
+  <div style="margin-top:2rem; padding: 1.5rem; border: 1px solid var(--green-border); border-radius: 10px; background: var(--green-pale); display: flex; gap: 3rem; flex-wrap: wrap;">
+    <div>
+      <div style="font-family: var(--font-display); font-size: 2rem; font-weight: 900; color: var(--green);">0.0.8324067</div>
+      <div style="font-size: 0.7rem; color: var(--white-dim); margin-top: 4px;">RainSafePool Contract · Hedera Testnet</div>
+    </div>
+    <div>
+      <div style="font-family: var(--font-display); font-size: 2rem; font-weight: 900; color: var(--green);">0.0.8323474</div>
+      <div style="font-size: 0.7rem; color: var(--white-dim); margin-top: 4px;">RainSafe Core Contract · Hedera Testnet</div>
+    </div>
+    <div>
+      <div style="font-family: var(--font-display); font-size: 2rem; font-weight: 900; color: var(--green);">3</div>
+      <div style="font-size: 0.7rem; color: var(--white-dim); margin-top: 4px;">HCS Topics · Climate event registry</div>
+    </div>
+  </div>
+</section>
+
+<!-- Business Model -->
+<section class="business-section" id="business">
+  <div class="section-tag">Business Model</div>
+  <h2 class="section-title fade-in">How RainSafe<br><em>sustains</em> itself.</h2>
+
+  <div class="revenue-streams">
+    <div class="revenue-card fade-in">
+      <span class="revenue-icon">⚙️</span>
+      <div class="revenue-title">Management Fee</div>
+      <div class="revenue-desc">RainSafe charges 3% of premiums as an operational fee. At 1,000 farmers paying 10 HBAR/month, this generates 300 HBAR/month to cover infrastructure and development.</div>
+      <span class="revenue-number">3% of premiums · Scales with network</span>
+    </div>
+
+    <div class="revenue-card fade-in">
+      <span class="revenue-icon">📊</span>
+      <div class="revenue-title">Yield Spread</div>
+      <div class="revenue-desc">Investors receive 8% annual yield. RainSafe negotiates 12% from the DeFi protocols where pool capital earns yield, capturing the 4% spread as protocol revenue.</div>
+      <span class="revenue-number">4% spread · Passive revenue</span>
+    </div>
+
+    <div class="revenue-card fade-in">
+      <span class="revenue-icon">🌍</span>
+      <div class="revenue-title">Climate Data API</div>
+      <div class="revenue-desc">Verified climate events recorded on-chain are valuable. Governments, NGOs, and traditional insurers pay for access to RainSafe's tamper-proof climate intelligence layer.</div>
+      <span class="revenue-number">Data-as-a-service · B2B revenue</span>
+    </div>
+
+    <div class="revenue-card fade-in">
+      <span class="revenue-icon">🏗️</span>
+      <div class="revenue-title">White Label Infrastructure</div>
+      <div class="revenue-desc">Cooperatives, microfinance institutions, and insurers in emerging markets can deploy their own parametric insurance pools using RainSafe's infrastructure for a licensing fee.</div>
+      <span class="revenue-number">SaaS licensing · High margin</span>
+    </div>
+  </div>
+</section>
+
+<!-- Security -->
+<section class="security-section" id="security">
+  <div class="section-tag">Anti-Fraud System</div>
+  <h2 class="section-title fade-in">Four layers of<br><em>protection</em>.</h2>
+
+  <div class="fraud-layers">
+    <div class="fraud-layer fade-in">
+      <div class="fraud-layer-letter">C1</div>
+      <div>
+        <div class="fraud-layer-title">Parcel Deduplication on HCS</div>
+        <div class="fraud-layer-desc">Each farm location is hashed to a ~111m grid cell and recorded on Hedera Consensus Service. No two policies can cover the same land. Permanently on-chain.</div>
+      </div>
+    </div>
+
+    <div class="fraud-layer fade-in">
+      <div class="fraud-layer-letter">C2</div>
+      <div>
+        <div class="fraud-layer-title">72-Hour Cooldown Period</div>
+        <div class="fraud-layer-desc">Coverage activates 72 hours after registration. Prevents farmers from signing up during an active drought event to immediately claim. Eliminates timing fraud entirely.</div>
+      </div>
+    </div>
+
+    <div class="fraud-layer fade-in">
+      <div class="fraud-layer-letter">C3</div>
+      <div>
+        <div class="fraud-layer-title">GPS Photo Verification</div>
+        <div class="fraud-layer-desc">Farmers must submit a photo from within 1km of the registered farm location. GPS metadata in the photo is cross-referenced against registered coordinates. Physical presence required.</div>
+      </div>
+    </div>
+
+    <div class="fraud-layer fade-in">
+      <div class="fraud-layer-letter">C4</div>
+      <div>
+        <div class="fraud-layer-title">Coverage Area Limit</div>
+        <div class="fraud-layer-desc">Maximum 500 HBAR coverage per registration. Prevents actors from insuring vast territories with a single smartphone, maintaining actuarial integrity of the pool.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Tech Stack -->
+<section class="tech-section" id="tech">
+  <div class="section-tag">Technology</div>
+  <h2 class="section-title fade-in">Built on <em>proven</em><br>infrastructure.</h2>
+
+  <div class="tech-grid">
+    <div class="tech-card fade-in">
+      <span class="tech-card-icon">⬡</span>
+      <div class="tech-card-name">Hedera Hashgraph</div>
+      <div class="tech-card-desc">Smart contracts, Consensus Service, Token Service. Carbon-negative. 10,000+ TPS. $0.0001 tx fee.</div>
+    </div>
+    <div class="tech-card fade-in">
+      <span class="tech-card-icon">🌧️</span>
+      <div class="tech-card-name">Open-Meteo API</div>
+      <div class="tech-card-desc">Free, no API key. Global historical and forecast rainfall data. Updated hourly. Used for drought detection.</div>
+    </div>
+    <div class="tech-card fade-in">
+      <span class="tech-card-icon">✈️</span>
+      <div class="tech-card-name">Telegram Bot API</div>
+      <div class="tech-card-desc">Farmer onboarding in Spanish. No app required. GPS location sharing. Photo verification. Multilingual roadmap.</div>
+    </div>
+    <div class="tech-card fade-in">
+      <span class="tech-card-icon">💳</span>
+      <div class="tech-card-name">HashPack Wallet</div>
+      <div class="tech-card-desc">Native Hedera wallet. iOS + Android. Farmers receive HBAR directly. No crypto knowledge required to receive payouts.</div>
+    </div>
+    <div class="tech-card fade-in">
+      <span class="tech-card-icon">📋</span>
+      <div class="tech-card-name">Solidity Contracts</div>
+      <div class="tech-card-desc">RainSafe core + RainSafePool. EVM-compatible. Deployed on Hedera Smart Contract Service. Verified on HashScan.</div>
+    </div>
+    <div class="tech-card fade-in">
+      <span class="tech-card-icon">⚛️</span>
+      <div class="tech-card-name">React Dashboard</div>
+      <div class="tech-card-desc">Real-time farm monitoring. Live API sync every 10 seconds. Insurance Pool analytics. Multi-stakeholder views.</div>
+    </div>
+    <div class="tech-card fade-in">
+      <span class="tech-card-icon">🔗</span>
+      <div class="tech-card-name">Express API</div>
+      <div class="tech-card-desc">Bridge between bot registrations and dashboard. farms.json persistence. Real-time sync between all system components.</div>
+    </div>
+    <div class="tech-card fade-in">
+      <span class="tech-card-icon">🔍</span>
+      <div class="tech-card-name">HashScan Explorer</div>
+      <div class="tech-card-desc">Every climate event, payout, and farm registration is publicly verifiable. Full transparency for all stakeholders.</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2 class="cta-title fade-in">
+    Ready to protect<br>your <em>harvest</em>?
+  </h2>
+  <p class="cta-subtitle fade-in">
+    Register your farm in 5 minutes via Telegram. No wallet needed to start. Coverage activates automatically.
+  </p>
+
+  <div class="cta-actions fade-in">
+    <a href="https://rainsafe-frontend.vercel.app" target="_blank" class="btn-primary">📊 Live Dashboard</a>
+    <a href="https://t.me/RainSafeHedera_bot" class="btn-primary">
+      🌱 Start on Telegram
+    </a>
+    <a href="https://hashscan.io/testnet/contract/0.0.8323474" target="_blank" class="btn-secondary">
+      View on HashScan →
+    </a>
+    <a href="https://github.com/jhontejada95/rainsafe" class="btn-secondary">
+      GitHub →
+    </a>
+  </div>
+
+  <div class="contracts-row fade-in">
+    <span class="contract-tag">
+      Core Contract:
+      <a href="https://hashscan.io/testnet/contract/0.0.8323474" target="_blank">0.0.8323474</a>
+    </span>
+    <span class="contract-tag">
+      Pool Contract:
+      <a href="https://hashscan.io/testnet/contract/0.0.8324067" target="_blank">0.0.8324067</a>
+    </span>
+    <span class="contract-tag">
+      Bot:
+      <a href="https://t.me/RainSafeHedera_bot" target="_blank">@RainSafeHedera_bot</a>
+    </span>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-logo">🌧️ RainSafe</div>
+  <div>Built on Hedera · Hedera Hello Future Apex Hackathon 2026</div>
+  <div>
+    <a href="https://github.com/jhontejada95/rainsafe" style="color: var(--green); text-decoration: none;">GitHub</a>
+    &nbsp;·&nbsp;
+    <a href="https://hashscan.io/testnet/contract/0.0.8323474" style="color: var(--green); text-decoration: none;" target="_blank">HashScan</a>
+    &nbsp;·&nbsp;
+    <a href="https://t.me/RainSafeHedera_bot" style="color: var(--green); text-decoration: none;">Telegram Bot</a>
+  </div>
+</footer>
+
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mx = e.clientX; my = e.clientY;
+    cursor.style.left = mx - 6 + 'px';
+    cursor.style.top = my - 6 + 'px';
+  });
+
+  function animateRing() {
+    rx += (mx - rx - 18) * 0.12;
+    ry += (my - ry - 18) * 0.12;
+    ring.style.left = rx + 'px';
+    ring.style.top = ry + 'px';
+    requestAnimationFrame(animateRing);
+  }
+  animateRing();
+
+  // Scroll fade-in
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // Stagger hero animations
+  document.querySelectorAll('.hero .fade-in').forEach((el, i) => {
+    el.style.transitionDelay = `${i * 0.12}s`;
+    setTimeout(() => el.classList.add('visible'), 100 + i * 120);
+  });
+</script>
+</body>
+</html>
