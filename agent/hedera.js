@@ -5,6 +5,7 @@ const {
   Client,
   AccountId,
   PrivateKey,
+  AccountCreateTransaction,
   TopicCreateTransaction,
   TopicMessageSubmitTransaction,
   ContractExecuteTransaction,
@@ -171,6 +172,28 @@ async function triggerPayout(farmId, eventType, hcsTopicId) {
   }
 }
 
+async function createFarmerWallet() {
+  try {
+    const client = getClient();
+    const newKey = PrivateKey.generateECDSA();
+    const tx = await new AccountCreateTransaction()
+      .setKey(newKey.publicKey)
+      .setInitialBalance(new Hbar(1))
+      .execute(client);
+    const receipt = await tx.getReceipt(client);
+    const accountId = receipt.accountId.toString();
+    console.log(`👛 New farmer wallet created: ${accountId}`);
+    return {
+      accountId,
+      privateKey: newKey.toStringRaw(),
+      publicKey: newKey.publicKey.toString(),
+    };
+  } catch (err) {
+    console.error(`❌ Wallet creation failed: ${err.message}`);
+    return null;
+  }
+}
+
 async function updateResilienceScore(farmId, score) {
   if (!process.env.CONTRACT_ID) return;
   try {
@@ -190,6 +213,7 @@ async function updateResilienceScore(farmId, score) {
 module.exports = {
   getClient,
   createFarmTopic,
+  createFarmerWallet,
   recordClimateEventHCS,
   registerFarmOnChain,
   verifyFarmOnChain,

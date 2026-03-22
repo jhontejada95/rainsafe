@@ -3,7 +3,7 @@ const TelegramBot = require("node-telegram-bot-api");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-const { registerFarmOnChain, raiseDisputeOnChain } = require("./hedera");
+const { registerFarmOnChain, raiseDisputeOnChain, createFarmerWallet } = require("./hedera");
 
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
 const DATA_FILE = path.join(__dirname, "../data/farms.json");
@@ -30,6 +30,9 @@ const LANG = {
     invalid_location: "❌ No pude detectar la ubicación. Intenta con Google Maps o coordenadas.",
     photo_ok: "📍 Foto verificada ✅",
     photo_skip: "Foto omitida — continuando.",
+    wallet_created: (accountId, privateKey) =>
+      `🔐 *Creamos tu wallet automáticamente*\n\nTu cuenta Hedera: \`${accountId}\`\nTu llave privada: \`${privateKey}\`\n\n⚠️ *Guarda esto en un lugar seguro. Nadie más puede verlo.*\n\nLos pagos por sequía llegarán a esta cuenta.`,
+    wallet_failed: "⚠️ No se pudo crear wallet — se usará dirección del protocolo como respaldo.",
     help: `🌧️ *RainSafe — Ayuda*\n\n/registrar — Nueva finca\n/estado — Ver estado\n/disputa — Reportar problema\n\n🌐 rainsafe-frontend.vercel.app`,
   },
   en: {
@@ -51,6 +54,9 @@ const LANG = {
     invalid_location: "❌ Could not detect location. Try a Google Maps link or coordinates.",
     photo_ok: "📍 Photo verified ✅",
     photo_skip: "Photo skipped — continuing.",
+    wallet_created: (accountId, privateKey) =>
+      `🔐 *We created your wallet automatically*\n\nYour Hedera account: \`${accountId}\`\nYour private key: \`${privateKey}\`\n\n⚠️ *Keep this safe. No one else can see it.*\n\nDrought payouts will go to this account.`,
+    wallet_failed: "⚠️ Could not create wallet — protocol address will be used as fallback.",
     help: `🌧️ *RainSafe — Help*\n\n/register — New farm\n/status — View status\n/dispute — Report issue\n\n🌐 rainsafe-frontend.vercel.app`,
   },
   pt: {
@@ -72,6 +78,9 @@ const LANG = {
     invalid_location: "❌ Não consegui detectar a localização. Tente Google Maps ou coordenadas.",
     photo_ok: "📍 Foto verificada ✅",
     photo_skip: "Foto ignorada — continuando.",
+    wallet_created: (accountId, privateKey) =>
+      `🔐 *Criamos sua carteira automaticamente*\n\nSua conta Hedera: \`${accountId}\`\nSua chave privada: \`${privateKey}\`\n\n⚠️ *Guarde isso em lugar seguro. Ninguém mais pode ver.*\n\nOs pagamentos por seca irão para esta conta.`,
+    wallet_failed: "⚠️ Não foi possível criar carteira — endereço do protocolo será usado como fallback.",
     help: `🌧️ *RainSafe — Ajuda*\n\n/registrar — Nova fazenda\n/estado — Ver status\n/disputa — Reportar problema\n\n🌐 rainsafe-frontend.vercel.app`,
   },
 };
@@ -290,7 +299,26 @@ bot.on("message", async (msg) => {
   // Step 5: Wallet + ON-CHAIN REGISTRATION
   if (session.step === 5) {
     const walletRegex = /^(0\.0\.\d+|0x[a-fA-F0-9]{40})$/;
-    session.data.wallet = walletRegex.test(text.trim()) ? text.trim() : null;
+
+    if (walletRegex.test(text.trim())) {
+      session.data.wallet = text.trim();
+    } else if (isSkip) {
+      // Auto-create a Hedera wallet for the farmer
+      const newWallet = await createFarmerWallet();
+      if (newWallet) {
+        session.data.wallet = newWallet.accountId;
+        await bot.sendMessage(
+          chatId,
+          t(chatId, "wallet_created", newWallet.accountId, newWallet.privateKey),
+          { parse_mode: "Markdown" }
+        );
+      } else {
+        session.data.wallet = null;
+        bot.sendMessage(chatId, t(chatId, "wallet_failed"));
+      }
+    } else {
+      session.data.wallet = null;
+    }
 
     const coverageActivatesAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
