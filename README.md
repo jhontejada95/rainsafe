@@ -1,4 +1,4 @@
-# 🌧️ RainSafe
+# RainSafe
 ### Parametric Climate Insurance for Smallholder Farmers on Hedera
 
 > **Hedera Hello Future Apex Hackathon 2026 — Sustainability Track**
@@ -31,8 +31,8 @@ When rainfall drops below 5mm in 7 consecutive days, the smart contract triggers
 **Key innovations:**
 - **Automatic payouts**: no human in the loop between weather event and payment
 - **Zero-friction onboarding**: farmers register via Telegram in their language (ES/EN/PT) — no app, no bank account required
-- **Auto wallet creation**: if a farmer has no Hedera wallet, the bot creates one automatically via `AccountCreateTransaction` and sends credentials via Telegram
-- **4-layer anti-fraud**: parcel deduplication (SHA256 grid), 30-day carencia, GPS photo verification, coverage area limit
+- **Auto wallet creation**: if a farmer has no Hedera wallet, the bot creates one via `AccountCreateTransaction` and sends credentials via Telegram
+- **4-layer anti-fraud**: parcel deduplication (SHA256 grid), 30-day waiting period, GPS photo verification, coverage area limit
 - **3-tier capital pool**: NGOs (first loss), ESG investors (yield), farmer premiums (continuous flow)
 - **On-chain everything**: registrations, climate events, payouts, and disputes are all verifiable on Hedera
 
@@ -42,12 +42,120 @@ When rainfall drops below 5mm in 7 consecutive days, the smart contract triggers
 
 | Component | URL |
 |---|---|
-| 🤖 Telegram Bot | [@RainSafeHedera_bot](https://t.me/RainSafeHedera_bot) — ES · EN · PT |
-| 📊 Dashboard | [rainsafe-frontend.vercel.app](https://rainsafe-frontend.vercel.app) |
-| 🌐 Landing Page | [jhontejada95.github.io/rainsafe](https://jhontejada95.github.io/rainsafe) |
-| 🔗 Core Contract v3 | [0.0.8329786](https://hashscan.io/testnet/contract/0.0.8329786) |
-| 🔗 Pool Contract v3 | [0.0.8329792](https://hashscan.io/testnet/contract/0.0.8329792) |
-| 📝 HCS Topics | 0.0.8329793 · 0.0.8329794 · 0.0.8329795 |
+| Telegram Bot | [@RainSafeHedera_bot](https://t.me/RainSafeHedera_bot) — ES · EN · PT |
+| Dashboard | [rainsafe-frontend.vercel.app](https://rainsafe-frontend.vercel.app) |
+| Landing Page | [jhontejada95.github.io/rainsafe](https://jhontejada95.github.io/rainsafe) |
+| Core Contract | [0.0.8329786](https://hashscan.io/testnet/contract/0.0.8329786) |
+| Pool Contract | [0.0.8329792](https://hashscan.io/testnet/contract/0.0.8329792) |
+| HCS Topics | 0.0.8329793 · 0.0.8329794 · 0.0.8329795 |
+
+---
+
+## Stakeholder Workflows
+
+### Farmer
+
+```
+1. Open Telegram → @RainSafeHedera_bot
+2. /register (ES) · /register (EN) · /registrar (PT)
+3. Provide: farm name → location (Maps link or coordinates) → coverage (50/100/200 HBAR) → GPS photo → wallet
+   └─ No wallet? Bot calls AccountCreateTransaction → creates Hedera account → sends credentials via Telegram
+4. Bot calls registerFarmOnChain() → TX recorded on Hedera Contract 0.0.8329786
+5. Bot calls recordClimateEventHCS() → registration logged on HCS Topic 0.0.8329793
+6. Farm appears on dashboard within 10 seconds
+
+Drought detected (monitor runs every 6h):
+   Open-Meteo API → rainfall < 5mm / 7 days
+   → HCS record (tamper-proof climate event)
+   → triggerClimateEvent() → Contract 0.0.8329786
+   → 3% fee to protocol treasury
+   → 97% net HBAR → farmer's payoutAddress
+   → Farmer receives payout in 3–5 seconds. No action required.
+
+Dispute a payout:
+   /dispute in Telegram bot OR Disputes tab in dashboard
+   → POST /api/disputes → raiseDispute() → Hedera (on-chain record)
+   → Reviewed within 3 business days
+```
+
+---
+
+### NGO / Grant Funder
+
+```
+1. Open dashboard → Insurance Pool tab
+2. Connect MetaMask (Chrome) → Hedera Testnet (chainId 296)
+   Network: https://testnet.hashio.io/api
+3. Click fundAsONG() → confirm in MetaMask (10 HBAR default)
+4. TX confirmed on Hedera → funds enter Tier 1 (first-loss tranche)
+5. On-chain impact report generated via HCS: farmers protected, payouts executed
+6. View TX on HashScan: hashscan.io/testnet/contract/0.0.8329792
+
+Role in the pool:
+   Tier 1 absorbs first claims → NGO capital is used before ESG investor capital
+   Impact score increments on-chain every time a payout is executed
+   No financial return — impact reporting only
+```
+
+---
+
+### ESG Investor
+
+```
+1. Open dashboard → Insurance Pool tab
+2. Connect MetaMask (Chrome) → Hedera Testnet (chainId 296)
+3. Click depositAsInvestor() → confirm in MetaMask (10 HBAR default)
+4. TX confirmed → funds enter Tier 2 (mezzanine tranche)
+5. Capital earns ~8% annual yield from unclaimed premiums
+6. Click claimYield() at any time to withdraw accrued yield
+
+Yield calculation (on-chain):
+   elapsed = current_time - last_claim
+   annual_yield = deposit × 8%
+   yield = annual_yield × elapsed / 365 days
+   → Paid directly to investor wallet via claimYield()
+```
+
+---
+
+### Protocol Monitor (Automated)
+
+```
+Runs every 6 hours via monitor.js:
+
+1. Reads farms.json (all registered farms with coordinates)
+2. For each farm → Open-Meteo API: total rainfall last 7 days
+3. Updates farms.json with current weather status
+4. If rainfall < 5mm:
+   a. Logs climate event to HCS (tamper-proof)
+   b. Calls triggerClimateEvent() on Contract 0.0.8329786
+   c. Contract pays 97% net to farm.payoutAddress
+   d. Records payout in payouts.json
+5. Dashboard reflects updated status within 10s
+
+Manual trigger: node agent/monitor.js
+```
+
+---
+
+### Arbitrator (Manual — MVP)
+
+```
+Disputes are filed via:
+   - Telegram: /dispute command
+   - Dashboard: Disputes tab → fill form → Submit
+
+Each dispute is:
+   1. Sent to POST /api/disputes on server.js
+   2. raiseDisputeOnChain() called → emits event on Hedera
+   3. Stored in data/disputes.json
+
+Arbitrator reviews:
+   - HCS record of the climate event in question
+   - Farm registration data on Contract 0.0.8329786
+   - Dispute reason submitted by farmer
+   → Manual resolution in MVP. Phase 5: DAO voting by HBAR stakers.
+```
 
 ---
 
@@ -68,14 +176,14 @@ Open-Meteo API → monitor.js (6h loop, reads real farms from farms.json)
          Smart Contract → 3% fee → treasury
                        → 97% net → farm.payoutAddress (farmer's wallet)
 
+NGO / Investor → MetaMask (Chrome, chainId 296) → ethers.js
+              ↓ fundAsONG() / depositAsInvestor() / claimYield()
+         Pool Contract 0.0.8329792
+
 Dispute flow:
          Dashboard/Bot → POST /api/disputes
-              ↓ raiseDispute() → Hedera (emits on-chain event)
-              ↓ persisted to data/disputes.json
-
-Pool flow:
-         MetaMask (chainId 296) → ethers.js → Pool Contract 0.0.8329792
-              ↓ fundAsONG() / depositAsInvestor() / claimYield() / payPremium()
+              ↓ raiseDisputeOnChain() → Hedera (on-chain event)
+              ↓ data/disputes.json
 ```
 
 ---
@@ -85,7 +193,7 @@ Pool flow:
 | Layer | Name | Description |
 |---|---|---|
 | **C1** | Parcel Deduplication | SHA256 hash to ~111m grid. One parcel = one policy. Permanent on HCS. |
-| **C2** | 30-day Carencia | Industry standard waiting period. Can't register during active drought. |
+| **C2** | 30-day Waiting Period | Industry standard. Can't register during active drought. |
 | **C3** | GPS Photo Verification | Photo must be taken within 1km of registered farm. |
 | **C4** | Coverage Area Limit | Max 200 HBAR per registration. |
 
@@ -109,7 +217,7 @@ Drought payout: 100 HBAR gross
 
 **A. Management Fee (live on-chain)**
 3% of all premiums automatically collected by smart contract.
-1,000 farmers × 10 HBAR/month = 300 HBAR/month (~$28 USD at current price).
+1,000 farmers × 10 HBAR/month = 300 HBAR/month.
 
 **B. Yield Spread**
 Investors receive 8% annual yield. RainSafe negotiates 12% from DeFi protocols → 4% spread = protocol revenue.
@@ -125,14 +233,14 @@ Cooperatives and microfinance institutions deploy their own pools via RainSafe.
 ## Insurance Pool (3-tier capital structure)
 
 ```
-Tier 1 — ONGs & Grants (First Loss)
+Tier 1 — NGOs & Grants (First Loss)
   → Absorb first claims
   → No financial return
   → On-chain impact reports via HCS
 
 Tier 2 — ESG Investors (Mezzanine)
   → ~8% annual yield from unclaimed premiums
-  → Capital earns DeFi yield while waiting
+  → Capital earns yield while waiting
   → claimYield() function on-chain
 
 Tier 3 — Farmer Premiums (Continuous Flow)
@@ -162,13 +270,13 @@ The bot auto-detects language from Telegram's `language_code` and supports manua
 2. Location (Google Maps link / pin / coordinates)
 3. Coverage: 50 / 100 / 200 HBAR
 4. GPS photo verification
-5. HashPack wallet (`0.0.XXXXXXX`) or EVM address — **auto-created if none** via `AccountCreateTransaction`
+5. Hedera wallet (`0.0.XXXXXXX`) or EVM address — **auto-created if none** via `AccountCreateTransaction`
 
 ---
 
 ## Dispute Resolution
 
-Farmers can raise disputes via `/disputa` command or the web dashboard. All disputes are:
+Farmers can raise disputes via `/dispute` command or the web dashboard. All disputes are:
 - Recorded permanently on Hedera Consensus Service
 - Queued for community arbitrator review (Phase 5: DAO governance)
 - Resolved within 3 business days (MVP: manual; Phase 5: on-chain voting)
@@ -185,6 +293,7 @@ Farmers can raise disputes via `/disputa` command or the web dashboard. All disp
 | Smart Contracts | Solidity + HSCS | Automated payouts, pool, fees |
 | Frontend | React + Vite | Real-time dashboard (6 tabs) |
 | Backend | Express.js | Farm registry API |
+| Wallet | MetaMask + ethers.js | Pool interactions (Chrome, chainId 296) |
 | Deployment | Vercel + GitHub Pages | Dashboard + landing |
 
 ---
@@ -196,32 +305,32 @@ Farmers can raise disputes via `/disputa` command or the web dashboard. All disp
 - Real climate data (Open-Meteo)
 - 4-layer anti-fraud (C1+C2+C3+C4)
 - 3% protocol fee on-chain
-- 30-day carencia period (industry standard)
-- 3-tier insurance pool
-- Dispute mechanism (on-chain record)
+- 30-day waiting period (industry standard)
+- 3-tier insurance pool with real on-chain transactions
+- Dispute mechanism (on-chain record via HCS)
 - Multilingual dashboard (6 tabs)
 - Smart contract payouts on Hedera testnet
 - Auto wallet creation for unbanked farmers (`AccountCreateTransaction`)
-- Payouts sent directly to farmer wallet via dedicated `payoutAddress` field in contract
+- MetaMask pool interactions: `fundAsONG()` and `depositAsInvestor()` confirmed on-chain
 
-### 🔄 Phase 2 — Actuarial Calibration
+### Phase 2 — Actuarial Calibration
 - Historical drought analysis by region (10-year data)
 - Dynamic threshold adjustment per geography
 - Mainnet deployment
 
-### 🔄 Phase 3 — Basis Risk Reduction
-- Neuron DePIN IoT sensor integration
-- Sub-kilometer drought detection
+### Phase 3 — Basis Risk Reduction
+- IoT sensor integration for sub-kilometer drought detection
+- Reduce basis risk between grid rainfall and actual farm conditions
 
-### 🔄 Phase 4 — Reinsurance Layer
+### Phase 4 — Reinsurance Layer
 - On-chain reinsurance for catastrophic regional events
 - Cross-pool risk sharing
 
-### 🔄 Phase 5 — DAO Governance
+### Phase 5 — DAO Governance
 - On-chain dispute resolution via DAO
 - Community arbitrators elected by HBAR stakers
 
-### 🔄 Phase 6 — Scale
+### Phase 6 — Scale
 - Multi-language (French, Swahili)
 - White label for cooperatives
 - Carbon credit integration
@@ -237,6 +346,7 @@ Farmers can raise disputes via `/disputa` command or the web dashboard. All disp
 | No reinsurance for correlated events | Phase 4 |
 | Dispute resolution is manual (MVP) | Phase 5 DAO |
 | Testnet only | Phase 2 mainnet |
+| Farmer premium via MetaMask reverts (internal fee transfer bug) | Farmers pay via Telegram bot (workaround active) |
 
 ---
 
@@ -262,6 +372,8 @@ cd frontend && npm run dev  # Terminal 4 — Dashboard :3000
 
 **Demo without credentials:** The dashboard at [rainsafe-frontend.vercel.app](https://rainsafe-frontend.vercel.app) works without any setup. The Telegram bot [@RainSafeHedera_bot](https://t.me/RainSafeHedera_bot) is live and functional.
 
+**MetaMask / Pool interactions:** Use Chrome (not Brave). Import the deployer private key from `.env` → `HEDERA_PRIVATE_KEY`. Add Hedera Testnet: RPC `https://testnet.hashio.io/api`, chainId `296`.
+
 ---
 
 ## Project Structure
@@ -274,14 +386,14 @@ rainsafe/
 │   ├── weather.js      # Open-Meteo API client
 │   └── hedera.js       # Hedera SDK (registerFarm, payout, HCS, createWallet)
 ├── contracts/
-│   ├── RainSafe.sol    # Core contract v3 (3% fee, 30d carencia, payoutAddress, disputes)
-│   └── RainSafePool.sol # Pool contract v3 (3-tier, fee, yield)
+│   ├── RainSafe.sol    # Core contract (3% fee, 30d waiting period, payoutAddress, disputes)
+│   └── RainSafePool.sol # Pool contract (3-tier, fee, yield, claimYield)
 ├── data/
 │   ├── farms.json      # Farm registry (persisted by server.js + monitor.js)
 │   ├── payouts.json    # Payout history
 │   └── disputes.json   # Dispute log
 ├── frontend/src/
-│   ├── App.jsx         # Main app (6 tabs, protocol banner, multilingual)
+│   ├── App.jsx         # Main app (6 tabs, protocol banner)
 │   └── components/
 │       ├── Dashboard.jsx       # Farm cards with real-time weather
 │       ├── PoolDashboard.jsx   # Pool + MetaMask + fee breakdown
@@ -303,13 +415,17 @@ rainsafe/
 
 ## Real-World Validation
 
-**Finca San Antonio, Salento, Colombia** (4.585518, -75.640176) — Real farm registered on-chain during development. TX verifiable on HashScan. Current rainfall: 37.1mm/7d → NORMAL ✅
+**Finca San Antonio, Salento, Colombia** (4.585518, -75.640176) — Real farm registered on-chain during development. TX verifiable on HashScan.
 
-**Finca El Progreso, Bogotá, Colombia** (4.711, -74.0721) — Demo farm in drought zone. Current rainfall: 2.3mm/7d → DROUGHT ALERT 🚨
+**Finca El Progreso, Bogotá, Colombia** (4.711, -74.0721) — Demo farm in drought zone. Current rainfall: 2.3mm/7d → DROUGHT ALERT
 
-**Parcela San Miguel, Oaxaca, México** (17.0732, -96.7266) — Demo farm. Current rainfall: 0.5mm/7d → DROUGHT ALERT 🚨
+**Parcela San Miguel, Oaxaca, México** (17.0732, -96.7266) — Demo farm. Current rainfall: 0.5mm/7d → DROUGHT ALERT
+
+**Pool transactions verified on-chain:**
+- `fundAsONG()` → [HashScan](https://hashscan.io/testnet/contract/0.0.8329792)
+- `depositAsInvestor()` → [HashScan](https://hashscan.io/testnet/contract/0.0.8329792)
 
 ---
 
 *Built on Hedera · Powered by Open-Meteo · Hedera Hello Future Apex 2026*
-*Sin papeles. Sin bancos. Sin intermediarios.*
+*No paperwork. No banks. No intermediaries.*
