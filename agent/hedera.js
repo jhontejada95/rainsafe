@@ -46,6 +46,19 @@ async function recordClimateEventHCS(topicId, eventData) {
   return receipt.topicSequenceNumber.toString();
 }
 
+function walletToEvmAddress(walletStr) {
+  if (!walletStr || walletStr === "0.0.0") {
+    return AccountId.fromString(process.env.HEDERA_ACCOUNT_ID).toSolidityAddress();
+  }
+  if (/^0\.0\.\d+$/.test(walletStr)) {
+    return AccountId.fromString(walletStr).toSolidityAddress();
+  }
+  if (/^0x[a-fA-F0-9]{40}$/.test(walletStr)) {
+    return walletStr.slice(2); // SDK addAddress expects no 0x prefix
+  }
+  return AccountId.fromString(process.env.HEDERA_ACCOUNT_ID).toSolidityAddress();
+}
+
 async function registerFarmOnChain(farmData) {
   if (!process.env.CONTRACT_ID) return null;
   try {
@@ -63,10 +76,12 @@ async function registerFarmOnChain(farmData) {
         .substring(0, 16);
 
     const walletAddress = farmData.wallet || "0.0.0";
+    const payoutEvmAddress = walletToEvmAddress(walletAddress);
 
     console.log(`🔗 Registering ${farmData.name} on-chain...`);
     console.log(`   Contract: ${process.env.CONTRACT_ID}`);
     console.log(`   Parcel hash: ${parcelHash}`);
+    console.log(`   Payout address: ${payoutEvmAddress}`);
 
     const tx = await new ContractExecuteTransaction()
       .setContractId(process.env.CONTRACT_ID)
@@ -80,6 +95,7 @@ async function registerFarmOnChain(farmData) {
           .addString(parcelHash)
           .addString(walletAddress)
           .addUint256(coverageTinybars)
+          .addAddress(payoutEvmAddress)
       )
       .execute(client);
 

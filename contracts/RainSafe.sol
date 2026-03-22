@@ -20,6 +20,7 @@ contract RainSafe {
         uint256 registeredAt;
         uint256 coverageActivatesAt;
         string walletAddress;
+        address payoutAddress;
         string parcelHash;
         bool verified;
     }
@@ -89,7 +90,8 @@ contract RainSafe {
         string memory _location,
         string memory _parcelHash,
         string memory _walletAddress,
-        uint256 _coverageAmount
+        uint256 _coverageAmount,
+        address _payoutAddress
     ) external payable returns (uint256) {
         require(msg.value > 0, "Premium required");
         require(!registeredParcels[_parcelHash], "Parcel already registered");
@@ -119,6 +121,7 @@ contract RainSafe {
             registeredAt: block.timestamp,
             coverageActivatesAt: activatesAt,
             walletAddress: _walletAddress,
+            payoutAddress: _payoutAddress != address(0) ? _payoutAddress : msg.sender,
             parcelHash: _parcelHash,
             verified: false
         });
@@ -167,7 +170,8 @@ contract RainSafe {
             if (!feeSent) {}
         }
 
-        (bool payoutSent,) = payable(farm.owner).call{value: netPayout}("");
+        address payable recipient = payable(farm.payoutAddress);
+        (bool payoutSent,) = recipient.call{value: netPayout}("");
         require(payoutSent, "Payout failed");
 
         if (resilienceScores[_farmId].score > 10)
@@ -176,7 +180,7 @@ contract RainSafe {
         resilienceScores[_farmId].lastUpdated = block.timestamp;
 
         emit ClimateEventTriggered(_farmId, _eventType, netPayout, fee);
-        emit PayoutExecuted(_farmId, farm.owner, netPayout);
+        emit PayoutExecuted(_farmId, recipient, netPayout);
     }
 
     // Dispute mechanism — emits event for DAO governance

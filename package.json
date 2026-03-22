@@ -6,6 +6,7 @@
   "scripts": {
     "deploy": "node scripts/deploy-v2.js",
     "fund": "node scripts/fund-contract.js",
+    "update-ids": "node scripts/update-ids.js",
     "agent": "node agent/monitor.js",
     "server": "node server.js",
     "bot": "node agent/bot.js",
