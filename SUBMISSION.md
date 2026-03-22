@@ -1,161 +1,193 @@
-# RainSafe — Hackathon Submission
+# RainSafe — Submission Form
 ## Hedera Hello Future Apex 2026
 
-> Use this file to copy-paste answers into the StackUp submission form.
+> Copia y pega cada bloque directo en el formulario de StackUp.
 
 ---
 
-## Challenge Selection
+## Challenge Theme
 
-**Challenge Theme:** Theme 3: Sustainability
+**Theme 3: Sustainability**
 *(Secondary: Theme 4: Open Track)*
 
 ---
 
-## Project Details
+## Project Name
 
-### Project Name
 ```
 RainSafe
 ```
 
-### Project Description (max 100 words)
+---
+
+## Project Description (max 100 words + tech stack + setup)
+
 ```
-RainSafe is parametric climate insurance for smallholder farmers on Hedera. When rainfall drops below 5mm in 7 days, the smart contract pays the farmer automatically — no adjusters, no paperwork, no banks. Farmers register via Telegram bot in ES/EN/PT in under 5 minutes. No wallet needed: the bot creates one via AccountCreateTransaction. A 3-tier capital pool (NGOs + ESG investors + farmer premiums) funds payouts. 4-layer anti-fraud system prevents abuse. Climate events are immutably recorded on HCS. 3% protocol fee on all transactions. Live on Hedera testnet with real weather data from Open-Meteo API.
+RainSafe brings climate insurance to the 500 million farmers who can't access it. When drought hits — less than 5mm of rain in 7 days — the smart contract pays the farmer automatically. No adjusters. No paperwork. No bank account needed. Farmers register in minutes through a Telegram bot in Spanish, English, or Portuguese. If they don't have a crypto wallet, the bot creates one for them. A 3-tier capital pool backs every payout. All climate events and payments live permanently on Hedera.
 
-Tech stack: Hedera SDK (HSCS + HCS), Solidity, Node.js, Telegram Bot API, React + Vite, Express.js, Open-Meteo API, ethers.js, MetaMask (chainId 296).
+Tech stack: Hedera SDK (HSCS + HCS), Solidity, Node.js, Telegram Bot API, React + Vite, Express.js, Open-Meteo API, ethers.js, MetaMask.
 
-Setup: No local setup required. Live dashboard: https://rainsafe-frontend.vercel.app · Bot: @RainSafeHedera_bot
+No setup needed to see it live — dashboard: https://rainsafe-frontend.vercel.app · Bot: @RainSafeHedera_bot
 ```
 
-### Project's GitHub Repo Link
+---
+
+## GitHub Repo
+
 ```
 https://github.com/jhontejada95/rainsafe
 ```
 
-### Project Demo Video Link
+---
+
+## Project Demo Video Link
+
 ```
-[INSERT LOOM/YOUTUBE LINK AFTER RECORDING]
+[PEGAR LINK DE LOOM O YOUTUBE DESPUÉS DE GRABAR]
 ```
 
-### Project Demo Link (live environment)
+---
+
+## Project Demo Link
+
 ```
 https://rainsafe-frontend.vercel.app
 ```
 
 ---
 
-## Hedera Developer Experience
+## Developer Experience — Escalas 1-10
 
-### On a scale of 1-10, how confident did you feel after reading the docs that you could build successfully?
-```
-7
-```
-*The HSCS and HCS docs are solid. The main friction was understanding the difference between Hedera account IDs (0.0.N) and EVM addresses, and how to pass them to smart contracts. Once we understood toSolidityAddress() and ContractFunctionParameters.addAddress(), everything clicked.*
+### ¿Qué tan seguro te sentiste leyendo los docs de que podías construir algo?
+**7**
 
-### On a scale of 1-10, how easy was it to get help when you were blocked?
-```
-6
-```
-*Discord community is active. Stack Overflow has limited Hedera-specific content. The SDK examples in the docs were helpful but sometimes outdated.*
+Arrancamos con buena base. Los docs de HSCS y HCS son sólidos, hay ejemplos reales. Lo que nos tomó tiempo fue entender cómo pasar una dirección de Hedera (formato 0.0.N) a un smart contract — el tipo `address` de Solidity espera formato EVM. Una vez que entendimos `toSolidityAddress()` y `ContractFunctionParameters.addAddress()`, todo fluyó.
 
-### On a scale of 1-10, how intuitive were the APIs / SDKs to use?
-```
-7
-```
-*The Node.js SDK is well-structured. ContractCreateFlow is elegant. The main learning curve was around fee handling (HBAR vs tinybars) and the interaction between the Hedera SDK and EVM-compatible contract calls.*
+---
 
-### On a scale of 1-10, how easy was it to debug issues?
-```
-6
-```
-*HashScan is excellent for verifying transactions. The SDK error messages are sometimes cryptic (e.g., INSUFFICIENT_GAS vs actual compilation errors). The viaIR compiler flag requirement for complex Solidity structs wasn't documented prominently.*
+### ¿Qué tan fácil fue conseguir ayuda cuando te bloqueaste?
+**6**
 
-### On a scale of 1-10, how likely are you to build again on Hedera after the hackathon?
-```
-9
-```
-*Carbon-negative, fast finality, and $0.0001 transactions make Hedera uniquely suited for high-frequency micropayment applications like parametric insurance. We plan to continue.*
+El Discord de Hedera tiene gente activa y respondieron rápido un par de veces. Stack Overflow tiene poco contenido específico de Hedera. Los ejemplos del SDK ayudaron bastante, aunque algunos estaban un poco desactualizados. Diría que la comunidad está creciendo pero todavía le falta volumen comparado con ecosistemas más maduros.
+
+---
+
+### ¿Qué tan intuitivos fueron los APIs y SDKs?
+**7**
+
+El SDK de Node.js está bien armado. `ContractCreateFlow` es elegante — compila, despliega y retorna el ID en una sola llamada. La curva de aprendizaje estuvo más en entender cuándo usar el SDK nativo de Hedera versus el patrón EVM compatible. No siempre es obvio qué capa usar para qué cosa.
+
+---
+
+### ¿Qué tan fácil fue debuggear?
+**6**
+
+HashScan es excelente — cada TX queda visible, podías ver el estado del contrato, los mensajes HCS, todo. Eso ayudó un montón. Lo que dolió fue que algunos errores del SDK son crípticos (por ejemplo, errores de compilación de Solidity que llegaban enmascarados como errores de gas). El flag `viaIR: true` que necesitamos para evitar "Stack too deep" tampoco estaba documentado en el contexto de Hedera — lo encontramos por prueba y error.
+
+---
+
+### ¿Qué tan probable es que vuelvas a construir en Hedera?
+**9**
+
+Mucho. $0.0001 por transacción y finalidad en 3-5 segundos cambian completamente lo que es posible construir. En Ethereum, hacer pagos de 10 HBAR de prima no tendría sentido — el gas lo come. En Hedera, tiene toda la lógica económica del mundo. Para aplicaciones de inclusión financiera esto no es un detalle, es lo que hace viable o no el modelo de negocio.
 
 ---
 
 ## Hackathon Experience
 
-### What are your main goals or objectives for participating in this hackathon?
-```
-We want to prove that blockchain can solve a real problem for the world's most vulnerable farmers. 500 million smallholder farmers have no access to climate insurance — not because the math doesn't work, but because the friction (paperwork, banks, adjusters) makes it economically unviable. Hedera's speed and cost profile makes RainSafe possible. Our goal: demonstrate a working MVP that any farmer with a phone can use, and validate the business model with real on-chain transactions.
-```
+### ¿Cuáles fueron tus principales objetivos al participar?
 
-### What was the biggest friction or blocker you faced?
 ```
-Two main blockers:
-
-1. EVM address handling: Hedera account IDs (0.0.N format) don't map directly to EVM addresses. The contract stores addresses as Solidity `address` type, but the SDK uses AccountId. We had to implement toSolidityAddress() conversion and ContractFunctionParameters.addAddress() correctly. This caused the payout going to the deployer instead of the farmer — a bug we caught and fixed by adding a dedicated payoutAddress field to the Farm struct.
-
-2. Solidity stack depth: Adding the payoutAddress parameter to registerFarm() pushed the function over the EVM stack limit. Solution: viaIR: true in the compiler settings. This wasn't documented prominently in the Hedera dev docs.
-```
-
-### What's one thing we could improve to make this hackathon experience better?
-```
-More code examples for the HSCS + Solidity interaction pattern — specifically how to pass and retrieve address types between the Hedera SDK and smart contracts. A "common patterns" guide covering: account ID → EVM address conversion, how to call payable functions with HBAR, and how to handle fee transfers inside contracts. These are non-obvious and blocked us for hours.
-```
-
-### What worked especially well that we should not change?
-```
-HashScan is excellent — being able to verify every transaction, inspect contract state, and see HCS messages in real time was invaluable for debugging and for demonstrating proof-of-concept to judges. The AccountCreateTransaction for auto-creating wallets is a killer feature for financial inclusion use cases. The low fees ($0.0001/tx) make parametric insurance economically viable at scale.
+Queríamos demostrar que blockchain puede resolver algo real para gente que lo necesita de verdad. Los agricultores pequeños son los más afectados por el cambio climático y los que menos herramientas financieras tienen. La pregunta que nos hacíamos era: ¿puede un campesino en Colombia o México recibir un pago automático cuando hay sequía, sin banco, sin papeles, sin esperar meses? Con Hedera la respuesta es sí. Eso era lo que queríamos probar — no solo en teoría sino con transacciones reales verificables en HashScan.
 ```
 
 ---
 
-## Hedera On-Chain Info
+### ¿Cuál fue el mayor bloqueo que tuviste?
 
-### Hedera Testnet Account ID of the team
+```
+Dos que nos costaron horas:
+
+1. Los payouts iban al deployer, no al agricultor. El contrato guardaba farm.owner (msg.sender = nosotros) en lugar de la wallet del agricultor. Tuvimos que agregar un campo payoutAddress separado en el struct Farm, pasarlo como parámetro en registerFarm(), y en hedera.js convertir el ID de Hedera a formato EVM con toSolidityAddress(). Parece simple en retrospectiva pero no lo fue en el momento.
+
+2. Al agregar ese parámetro extra, Solidity tiró "Stack too deep". La solución fue compilar con viaIR: true, que reorganiza cómo el compilador maneja las variables locales. Ni los docs de Hedera ni los de Solidity lo mencionaban claramente para este caso. Lo encontramos en un issue de GitHub de 2022 sobre un proyecto diferente.
+```
+
+---
+
+### ¿Qué mejorarías del hackathon?
+
+```
+Una guía de "patrones comunes" para HSCS. Algo que explique de forma directa: cómo pasar un address de Hedera a un contrato Solidity, cómo llamar funciones payable con HBAR, cómo manejar transfers de fee dentro del contrato sin que falle. Son cosas que cualquier proyecto real va a necesitar y hoy requieren leer issues de GitHub, código de ejemplo disperso, y bastante prueba y error. Si eso estuviera condensado en un doc, le ahorra días a los próximos builders.
+```
+
+---
+
+### ¿Qué funcionó bien y no cambiarías?
+
+```
+HashScan. Tener un explorador así de bueno hace una diferencia enorme — en desarrollo para debuggear, en la demo para mostrarle a los jueces que todo es real y verificable. También AccountCreateTransaction: poder crear wallets programáticamente desde el bot fue lo que hizo posible el flujo para agricultores sin cuenta. Es exactamente el tipo de primitiva que hace falta para inclusión financiera real. Y las fees bajas — sin eso RainSafe no tiene modelo de negocio.
+```
+
+---
+
+## Info On-Chain
+
+### Hedera Testnet Account ID del equipo
+
 ```
 0.0.8319187
 ```
-*(All contract deployments, HCS topics, and test transactions were made from this account. Verifiable on HashScan.)*
 
-**Contracts deployed:**
-- Core (RainSafe.sol): `0.0.8329786` → https://hashscan.io/testnet/contract/0.0.8329786
-- Pool (RainSafePool.sol): `0.0.8329792` → https://hashscan.io/testnet/contract/0.0.8329792
+Todos los contratos, topics HCS y transacciones de prueba salieron de esta cuenta. Se puede verificar en HashScan.
+
+Contratos desplegados:
+- Core: `0.0.8329786` — https://hashscan.io/testnet/contract/0.0.8329786
+- Pool: `0.0.8329792` — https://hashscan.io/testnet/contract/0.0.8329792
 - HCS Topics: `0.0.8329793`, `0.0.8329794`, `0.0.8329795`
 
-### Mainnet wallet addresses (for Apex NFT)
+---
+
+### Mainnet wallet addresses (para el Apex NFT)
+
 ```
-[INSERT YOUR MAINNET HEDERA WALLET ADDRESS HERE]
+[PONER TU DIRECCIÓN DE MAINNET AQUÍ]
 ```
 
 ---
 
-## Team Info
+## Info del Equipo
 
-### Discord Handles
-```
-[INSERT DISCORD HANDLE]
-```
+### Discord Handle(s)
 
-### LinkedIn Profile URLs
 ```
-[INSERT LINKEDIN URL]
+[TU HANDLE DE DISCORD]
 ```
 
-### Thoughts on building on Hedera
+### LinkedIn(s)
+
 ```
-Hedera is uniquely positioned for financial inclusion applications. The combination of:
-- Carbon-negative consensus (important for a sustainability project)
-- 3–5 second finality (critical for parametric insurance — farmers need to see the payout immediately)
-- $0.0001 per transaction (makes micropremiums economically viable)
-- HCS for tamper-proof event logging (immutable audit trail for disputes and climate events)
-- AccountCreateTransaction (create wallets for unbanked users programmatically)
-
-...makes RainSafe possible in a way that wouldn't work on other chains. Ethereum gas costs would make 10 HBAR premiums economically absurd. Hedera makes them viable.
-
-The main challenge was the learning curve around EVM compatibility — Hedera supports both native SDK patterns and EVM-compatible calls, and understanding when to use which required significant trial and error. Better documentation on the boundary between these two paradigms would accelerate future builders significantly.
+[TU URL DE LINKEDIN]
 ```
 
 ---
 
-## Bounty Submission
+### ¿Cómo fue construir en Hedera?
+
 ```
-[Check https://go.hellofuturehackathon.dev/submit-bounty for applicable bounties]
+Honestamente mejor de lo que esperábamos. Entramos un poco escépticos — hay mucho ecosistema blockchain y no todos entregan lo que prometen. Pero los números de Hedera son reales: 3-5 segundos de finalidad, $0.0001 por transacción, huella de carbono negativa. Para un proyecto de seguros climáticos para agricultores en países en desarrollo, esos números importan de verdad.
+
+Lo que más nos sorprendió positivamente fue HCS — Hedera Consensus Service. Poder registrar eventos de clima de forma permanente e inmutable, sin que estén en una base de datos que controlamos nosotros, le da una credibilidad completamente diferente al sistema. Un agricultor puede reclamar una disputa y mostrar el registro en HCS. Eso es auditable por cualquiera.
+
+Lo más difícil fue el límite de EVM compatibility. Hedera soporta tanto el SDK nativo como contratos EVM, pero la línea entre cuándo usar uno u otro no siempre es clara en los docs. Terminas mezclando patrones de los dos mundos y hay edge cases que no están documentados. Mejorar esa documentación sería un salto grande para developers que vienen de Ethereum.
+
+En resumen: volvemos a construir en Hedera. El modelo de costos y la velocidad lo hacen único para casos de uso de pagos reales.
+```
+
+---
+
+## Bounty
+
+```
+Revisar: https://go.hellofuturehackathon.dev/submit-bounty
 ```

@@ -1,133 +1,136 @@
-# RainSafe — Video Demo Script (5 min)
-### Hedera Hello Future Apex 2026 — Sustainability Track
+# RainSafe — Guión Video Demo (5 min)
+### Hedera Hello Future Apex 2026
+
+> Habla natural. No leas esto palabra por palabra — úsalo como guía.
+> Graba con Loom o OBS. Pantalla + voz. Sin cámara si no quieres.
 
 ---
 
-## [0:00 – 0:30] Intro & Hook
+## Antes de dar rec — abre todo esto:
 
-**Pantalla:** Landing page — jhontejada95.github.io/rainsafe
-
-**Narración:**
-> "500 million smallholder farmers have zero climate protection.
-> Traditional insurance takes 4 to 6 months to pay out — long after the farmer needed the money.
-> RainSafe changes this. When rainfall drops below 5mm in 7 days, the payout happens automatically.
-> No adjusters. No paperwork. No banks.
-> Built on Hedera. Live on testnet. Today."
+- [ ] Terminal 1: `node server.js`
+- [ ] Terminal 2: `node agent/bot.js`
+- [ ] Navegador tab 1: `rainsafe-frontend.vercel.app` (dashboard)
+- [ ] Navegador tab 2: `jhontejada95.github.io/rainsafe` (landing)
+- [ ] Navegador tab 3: `hashscan.io/testnet/contract/0.0.8329786`
+- [ ] Telegram: chat con @RainSafeHedera_bot
+- [ ] MetaMask: conectado a Hedera Testnet (chainId 296)
 
 ---
 
-## [0:30 – 1:45] Bot Registration (Telegram)
+## [0:00 – 0:30] Abre con el problema
+
+**Pantalla:** landing page
+
+Algo así — con tus palabras:
+
+> "Hay 500 millones de agricultores pequeños en el mundo que no tienen ningún tipo de seguro agrícola. Y no es porque no lo necesiten — es porque el proceso es imposible para ellos. Papeles, bancos, tasadores que tardan meses. Cuando finalmente llega el dinero, ya perdieron la cosecha, se endeudaron, o peor.
+>
+> RainSafe lo resuelve diferente. Cuando hay sequía — menos de 5mm de lluvia en 7 días — el contrato paga solo. Sin intermediarios. En segundos."
+
+---
+
+## [0:30 – 1:45] Registro por Telegram
 
 **Pantalla:** Telegram → @RainSafeHedera_bot
 
-**Pasos a mostrar:**
-1. Escribir `/registrar` (o `/start` → seleccionar idioma)
-2. Ingresar nombre de la finca
-3. Enviar ubicación (coordenadas o link de Google Maps)
-4. Seleccionar cobertura: **100 HBAR**
-5. Enviar foto GPS (o escribir "saltar" → bot crea wallet automáticamente)
-6. Ingresar wallet Hedera o dejar que el bot la cree
+Haz el registro en vivo mientras hablas:
 
-**Narración:**
-> "The farmer opens Telegram. No app to install. No bank account needed.
-> They register their farm in 5 steps — name, location, coverage, photo, wallet.
-> If they don't have a Hedera wallet, the bot creates one automatically and sends them the credentials."
+> "El agricultor abre Telegram. No necesita descargar nada, no necesita un banco, no necesita saber nada de crypto."
 
-**Mostrar:** Mensaje de confirmación con TX ID y link a HashScan
+Escribe `/registrar` y sigue el flujo:
+
+1. Nombre de la finca — escríbelo en vivo
+2. Ubicación — manda coordenadas o un link de Maps
+3. Cobertura — elige 100 HBAR
+4. Foto GPS — manda una foto (o escribe "saltar")
+5. Wallet — si no tienes, el bot crea una automáticamente
+
+> "Mira esto — si el agricultor no tiene wallet de Hedera, el bot crea una y le manda las credenciales por acá mismo. Eso es inclusión financiera real."
+
+Muestra el mensaje de confirmación con el TX ID.
 
 ---
 
-## [1:45 – 2:15] HashScan — Verificación On-Chain
+## [1:45 – 2:15] HashScan — que se vea que es real
 
 **Pantalla:** hashscan.io/testnet/contract/0.0.8329786
 
-**Narración:**
-> "Every registration is a real transaction on Hedera. Verifiable. Permanent. Tamper-proof.
-> The farm count increments on-chain. No central database controls this."
+> "Esa transacción que acabas de ver en el bot — acá está en Hedera. Verificable por cualquiera. Permanente. El contador de fincas aumentó."
 
-**Mostrar:**
-- La transacción del bot visible en HashScan
-- `farmCount` incrementado en el contrato
-- HCS topic con el evento registrado
+Muestra:
+- La TX del registro
+- El `farmCount` en el contrato
+- Un mensaje HCS del topic 0.0.8329793
+
+> "Esto no está en una base de datos nuestra. Está en Hedera."
 
 ---
 
-## [2:15 – 3:00] Dashboard — Tiempo Real
+## [2:15 – 3:00] El dashboard
 
 **Pantalla:** rainsafe-frontend.vercel.app
 
-**Narración:**
-> "The dashboard updates in real time. Every 10 seconds it pulls from the API.
-> We can see Finca El Progreso — 2.3mm of rain in 7 days. Drought detected. Payout eligible.
-> The Resilience Score combines rainfall, coverage, and time in the pool."
+> "El dashboard se actualiza cada 10 segundos con datos reales del API."
 
-**Mostrar:**
-- Tab Dashboard: 5 fincas, 1 alerta activa (Finca El Progreso en rojo)
-- Tab Resilience Score: score 42/100 para la finca en sequía
-- Tab Payout History: payouts con gross/net/fee desglosados
+Muestra las tarjetas de fincas:
 
----
+> "Finca El Progreso, Bogotá — 2.3mm de lluvia en 7 días. Sequía detectada, pago elegible. El monitor lo está procesando."
 
-## [3:00 – 3:45] Insurance Pool — MetaMask
-
-**Pantalla:** Tab "Insurance Pool" en el dashboard
-
-**Narración:**
-> "The pool has a 3-tier capital structure — NGOs absorb first losses, ESG investors earn yield,
-> farmer premiums flow continuously.
-> Investors connect MetaMask on Hedera Testnet and interact directly with the smart contract."
-
-**Pasos a mostrar:**
-1. Click "Connect Wallet" → MetaMask abre (chainId 296)
-2. Mostrar balance del pool (50 HBAR disponibles)
-3. Click `fundAsONG()` → confirmar TX en MetaMask
-4. TX confirmada — fondos en el contrato `0.0.8329792`
+Navega a los tabs:
+- **Resilience Score** — "Este score es la identidad financiera on-chain del agricultor. Mientras más tiempo en el pool sin eventos, mejor score."
+- **Payout History** — "Cada pago tiene el desglose: bruto, 3% de fee al protocolo, neto al agricultor."
 
 ---
 
-## [3:45 – 4:30] Disputes + Monitor
+## [3:00 – 3:45] El pool — MetaMask
 
-**Pantalla:** Tab "Disputes" en el dashboard → terminal con monitor.js
+**Pantalla:** Tab Insurance Pool
 
-**Narración:**
-> "Farmers can dispute a payout decision directly from the dashboard or the bot.
-> Every dispute is recorded permanently on Hedera Consensus Service — not in a database we control."
+> "El capital viene de tres fuentes: ONGs que absorben las primeras pérdidas, inversores ESG que reciben yield, y las primas de los agricultores."
 
-**Mostrar:**
-1. Formulario de disputa → Submit → "Dispute recorded on Hedera"
-2. Terminal corriendo `node agent/monitor.js` — ciclo de monitoreo
-3. Open-Meteo API response → drought detected → `triggerClimateEvent()` → TX on Hedera
+Conecta MetaMask:
+
+> "Un inversor conecta su wallet directamente — chainId 296, Hedera Testnet."
+
+Muestra el balance del pool. Haz click en `fundAsONG()` y confirma en MetaMask.
+
+> "TX confirmada. Los fondos están en el contrato 0.0.8329792. Verificable en HashScan ahora mismo."
+
+---
+
+## [3:45 – 4:30] Disputas + Monitor
+
+**Pantalla:** Tab Disputes → luego terminal
+
+> "Si un agricultor cree que el pago fue incorrecto, puede disputarlo desde el dashboard o desde el bot con /disputa."
+
+Muestra el formulario de disputa, llénalo y envíalo.
+
+> "Esa disputa queda registrada en Hedera Consensus Service. No en una base de datos que controlamos nosotros — en HCS. Inmutable."
+
+Cambia a la terminal con monitor.js corriendo:
+
+> "Esto es el monitor — corre cada 6 horas, lee las fincas reales, consulta Open-Meteo, y si detecta sequía llama al contrato directamente."
+
+Muestra el output del ciclo si puedes.
 
 ---
 
 ## [4:30 – 5:00] Cierre
 
-**Pantalla:** Landing page scroll + HashScan del contrato
+**Pantalla:** vuelve a la landing, luego HashScan
 
-**Narración:**
-> "RainSafe is parametric climate insurance for farmers who can't afford to wait.
-> 4-layer anti-fraud. Automatic payouts. Real weather data. Real on-chain transactions.
-> Built on Hedera — carbon-negative, fast, and $0.0001 per transaction.
-> 500 million farmers. No paperwork. No banks. No intermediaries."
+Habla directo, sin apuro:
 
-**Mostrar últimas pantallas:**
-- Contrato `0.0.8329786` en HashScan con balance
-- Bot en Telegram activo
-- Dashboard con fincas en tiempo real
+> "Esto está vivo en Hedera testnet hoy. Transacciones reales, datos reales de clima, wallets reales.
+>
+> El modelo tiene sentido económico — $0.0001 por transacción hace viable las microprimas. 3-5 segundos de finalidad significa que el agricultor recibe su pago antes de que pueda apagar el teléfono.
+>
+> 500 millones de agricultores. Sin papeles. Sin bancos. Sin esperar."
 
-**Frase final (en pantalla):**
-> *Sin papeles. Sin bancos. Sin intermediarios.*
-> *Built on Hedera · Powered by Open-Meteo · Hedera Hello Future Apex 2026*
+Termina con la pantalla de HashScan abierta mostrando el contrato con balance.
 
 ---
 
-## Checklist antes de grabar
-
-- [ ] `node server.js` corriendo en Terminal 1
-- [ ] `node agent/bot.js` corriendo en Terminal 2
-- [ ] Dashboard abierto en `rainsafe-frontend.vercel.app`
-- [ ] HashScan abierto en `hashscan.io/testnet/contract/0.0.8329786`
-- [ ] Telegram abierto con @RainSafeHedera_bot
-- [ ] MetaMask configurado en Hedera Testnet (chainId 296, RPC: https://testnet.hashio.io/api)
-- [ ] Loom o OBS listo para grabar pantalla + voz
-- [ ] Duración objetivo: 5 minutos exactos
+> *Sin papeles. Sin bancos. Sin intermediarios.*
