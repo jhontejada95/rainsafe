@@ -85,7 +85,7 @@ async function registerFarmOnChain(farmData) {
 
     const tx = await new ContractExecuteTransaction()
       .setContractId(process.env.CONTRACT_ID)
-      .setGas(400000)
+      .setGas(800000)
       .setPayableAmount(Hbar.fromTinybars(premiumTinybars))
       .setFunction(
         "registerFarm",
