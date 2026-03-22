@@ -1,6 +1,8 @@
 // RegisterFarm.jsx
 import { useState } from "react";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+
 export function RegisterFarm({ onRegister }) {
   const [form, setForm] = useState({
     name: "",
@@ -11,23 +13,58 @@ export function RegisterFarm({ onRegister }) {
   });
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState(null);
 
   const handle = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
   const submit = async () => {
     if (!form.name || !form.location) return;
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1500)); // simulate tx
-    onRegister({ ...form, lat: parseFloat(form.lat) || 4.711, lng: parseFloat(form.lng) || -74.07 });
-    setDone(true);
-    setSubmitting(false);
+    setError(null);
+
+    const farmData = {
+      name: form.name,
+      location: form.location,
+      lat: parseFloat(form.lat) || 0,
+      lon: parseFloat(form.lng) || 0,
+      coverage: parseInt(form.coverageHbar) || 100,
+      coverageActivatesAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      registeredAt: new Date().toISOString(),
+      source: "dashboard",
+    };
+
+    try {
+      const res = await fetch(`${API_URL}/api/farms`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(farmData),
+      });
+      const data = await res.json();
+      if (data.success) {
+        onRegister({ ...farmData, lng: farmData.lon });
+        setDone(true);
+      } else {
+        setError("API error. Check that server.js is running.");
+      }
+    } catch {
+      setError("Cannot connect to API (localhost:3001). For full on-chain registration use the Telegram bot @RainSafeHedera_bot.");
+      // Still register locally for demo
+      onRegister({ ...farmData, lng: farmData.lon });
+      setDone(true);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (done) return (
     <div style={{ textAlign: "center", padding: "4rem" }}>
       <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>✅</div>
       <h2 style={{ fontWeight: 800, marginBottom: "8px" }}>Farm Registered!</h2>
-      <p style={{ color: "var(--text-dim)" }}>Your farm is now being monitored on Hedera.</p>
+      <p style={{ color: "var(--text-dim)", marginBottom: "1rem" }}>Your farm is now being monitored for climate events.</p>
+      <p style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
+        For on-chain registration with blockchain proof, use{" "}
+        <a href="https://t.me/RainSafeHedera_bot" target="_blank" rel="noreferrer" style={{ color: "var(--green)" }}>@RainSafeHedera_bot</a>
+      </p>
     </div>
   );
 
@@ -85,6 +122,12 @@ export function RegisterFarm({ onRegister }) {
           </p>
         </div>
 
+        {error && (
+          <div style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 10, padding: "10px 14px", fontSize: "0.8rem", color: "#f59e0b" }}>
+            ⚠️ {error}
+          </div>
+        )}
+
         <button
           onClick={submit}
           disabled={submitting}
@@ -97,8 +140,13 @@ export function RegisterFarm({ onRegister }) {
             marginTop: "8px", transition: "all 0.2s",
           }}
         >
-          {submitting ? "⏳ Registering on Hedera..." : "Register Farm →"}
+          {submitting ? "⏳ Registering..." : "Register Farm →"}
         </button>
+
+        <p style={{ fontSize: "0.75rem", color: "var(--text-dim)", textAlign: "center", fontFamily: "var(--mono)" }}>
+          For full on-chain TX proof use{" "}
+          <a href="https://t.me/RainSafeHedera_bot" target="_blank" rel="noreferrer" style={{ color: "var(--green)" }}>@RainSafeHedera_bot</a>
+        </p>
       </div>
     </div>
   );

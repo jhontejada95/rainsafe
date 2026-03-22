@@ -5,7 +5,7 @@
 
 [![Live Dashboard](https://img.shields.io/badge/Dashboard-Live-22c55e)](https://rainsafe-frontend.vercel.app)
 [![Telegram Bot](https://img.shields.io/badge/Bot-@RainSafeHedera__bot-229ED9)](https://t.me/RainSafeHedera_bot)
-[![Hedera Testnet](https://img.shields.io/badge/Hedera-Testnet-8B5CF6)](https://hashscan.io/testnet/contract/0.0.8323474)
+[![Hedera Testnet](https://img.shields.io/badge/Hedera-Testnet-8B5CF6)](https://hashscan.io/testnet/contract/0.0.8324803)
 [![Landing Page](https://img.shields.io/badge/Landing-GitHub%20Pages-black)](https://jhontejada95.github.io/rainsafe)
 
 ---
@@ -25,9 +25,9 @@
 | 🤖 Telegram Bot | [@RainSafeHedera_bot](https://t.me/RainSafeHedera_bot) — ES · EN · PT |
 | 📊 Dashboard | [rainsafe-frontend.vercel.app](https://rainsafe-frontend.vercel.app) |
 | 🌐 Landing Page | [jhontejada95.github.io/rainsafe](https://jhontejada95.github.io/rainsafe) |
-| 🔗 Core Contract v2 | [0.0.8323474](https://hashscan.io/testnet/contract/0.0.8323474) |
-| 🔗 Pool Contract v2 | [0.0.8324067](https://hashscan.io/testnet/contract/0.0.8324067) |
-| 📝 HCS Topics | 0.0.8323476 · 0.0.8323477 · 0.0.8323478 |
+| 🔗 Core Contract v2 | [0.0.8324803](https://hashscan.io/testnet/contract/0.0.8324803) |
+| 🔗 Pool Contract v2 | [0.0.8324807](https://hashscan.io/testnet/contract/0.0.8324807) |
+| 📝 HCS Topics | 0.0.8324808 · 0.0.8324810 · 0.0.8324811 |
 
 ---
 
@@ -35,17 +35,23 @@
 
 ```
 Farmer → Telegram Bot (ES/EN/PT)
-              ↓ POST /api/farms
-         Express API (server.js :3001)
+              ↓ registerFarmOnChain() → Hedera Contract 0.0.8324803
+              ↓ recordClimateEventHCS() → HCS Topic 0.0.8324808
+              ↓ POST /api/farms → Express API (server.js :3001)
               ↓ farms.json
-         React Dashboard (Vercel) ← polls every 10s
+         React Dashboard (Vercel) ← polls /api/farms every 10s
 
-Open-Meteo API → monitor.js (6h loop)
-              ↓ climate event detected
+Open-Meteo API → monitor.js (6h loop, reads real farms from farms.json)
+              ↓ drought/flood detected (< 5mm / 7 days)
          HCS Topic record (tamper-proof)
-              ↓
+              ↓ triggerClimateEvent() → Contract 0.0.8324803
          Smart Contract → 3% fee → treasury
                        → 97% net → farmer wallet
+
+Dispute flow:
+         Dashboard/Bot → POST /api/disputes
+              ↓ raiseDispute() → Hedera (emits on-chain event)
+              ↓ persisted to disputes.json
 ```
 
 ---

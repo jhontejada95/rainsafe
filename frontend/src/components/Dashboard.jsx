@@ -108,7 +108,7 @@ function FarmCard({ farm }) {
           fontSize: "0.8rem", color: "#ef4444",
           fontFamily: "var(--mono)",
         }}>
-          🚨 {farm.eventType?.toUpperCase()} DETECTED — Automatic payout initiated
+          🚨 {farm.eventType?.toUpperCase()} DETECTED — Payout eligible · monitor.js processing
         </div>
       )}
 

@@ -4,8 +4,10 @@
   "description": "Parametric climate insurance for rural farming communities on Hedera",
   "main": "agent/monitor.js",
   "scripts": {
-    "deploy": "node scripts/deploy.js",
+    "deploy": "node scripts/deploy-v2.js",
     "agent": "node agent/monitor.js",
+    "server": "node server.js",
+    "bot": "node agent/bot.js",
     "dev": "cd frontend && npm run dev"
   },
   "dependencies": {
