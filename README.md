@@ -12,9 +12,29 @@
 
 ## The Problem
 
-500 million smallholder farmers worldwide have **zero climate protection**. Traditional insurance takes 4–6 months to pay out — long after the farmer needed the money. Most farmers don't even try.
+**500 million smallholder farmers worldwide have zero climate protection.**
 
-**RainSafe changes this.** When rainfall drops below 5mm in 7 days, the payout happens automatically. No adjusters. No paperwork. No banks.
+When drought hits, a farmer loses their entire season. Traditional insurance:
+- Takes **4–6 months** to pay out — long after the farmer needed the money
+- Requires adjusters, paperwork, bank accounts, and legal documentation
+- Is **inaccessible** to the unbanked majority of rural farmers worldwide
+- Covers less than **3% of agricultural losses** in developing countries
+
+The result: farmers take on debt, sell assets, or abandon their land. Climate change makes this worse every year, yet the financial tools haven't changed in decades.
+
+## Our Solution
+
+**RainSafe is parametric climate insurance that pays automatically — no paperwork, no banks, no waiting.**
+
+When rainfall drops below 5mm in 7 consecutive days, the smart contract triggers a payout directly to the farmer's wallet. The trigger is objective (Open-Meteo weather API), immutable (recorded on Hedera Consensus Service), and instant (Hedera finalizes in 3–5 seconds).
+
+**Key innovations:**
+- **Automatic payouts**: no human in the loop between weather event and payment
+- **Zero-friction onboarding**: farmers register via Telegram in their language (ES/EN/PT) — no app, no bank account required
+- **Auto wallet creation**: if a farmer has no Hedera wallet, the bot creates one automatically via `AccountCreateTransaction` and sends credentials via Telegram
+- **4-layer anti-fraud**: parcel deduplication (SHA256 grid), 30-day carencia, GPS photo verification, coverage area limit
+- **3-tier capital pool**: NGOs (first loss), ESG investors (yield), farmer premiums (continuous flow)
+- **On-chain everything**: registrations, climate events, payouts, and disputes are all verifiable on Hedera
 
 ---
 
@@ -34,24 +54,28 @@
 ## Architecture
 
 ```
-Farmer → Telegram Bot (ES/EN/PT)
+Farmer → Telegram Bot (@RainSafeHedera_bot, ES/EN/PT)
               ↓ registerFarmOnChain() → Hedera Contract 0.0.8329786
               ↓ recordClimateEventHCS() → HCS Topic 0.0.8329793
               ↓ POST /api/farms → Express API (server.js :3001)
-              ↓ farms.json
+              ↓ data/farms.json
          React Dashboard (Vercel) ← polls /api/farms every 10s
 
 Open-Meteo API → monitor.js (6h loop, reads real farms from farms.json)
-              ↓ drought/flood detected (< 5mm / 7 days)
+              ↓ drought detected (< 5mm / 7 days)
          HCS Topic record (tamper-proof)
               ↓ triggerClimateEvent() → Contract 0.0.8329786
          Smart Contract → 3% fee → treasury
-                       → 97% net → farmer wallet
+                       → 97% net → farm.payoutAddress (farmer's wallet)
 
 Dispute flow:
          Dashboard/Bot → POST /api/disputes
               ↓ raiseDispute() → Hedera (emits on-chain event)
-              ↓ persisted to disputes.json
+              ↓ persisted to data/disputes.json
+
+Pool flow:
+         MetaMask (chainId 296) → ethers.js → Pool Contract 0.0.8329792
+              ↓ fundAsONG() / depositAsInvestor() / claimYield() / payPremium()
 ```
 
 ---
@@ -88,11 +112,10 @@ Drought payout: 100 HBAR gross
 1,000 farmers × 10 HBAR/month = 300 HBAR/month (~$28 USD at current price).
 
 **B. Yield Spread**
-Investors receive 8% annual yield.
-RainSafe negotiates 12% from DeFi protocols → 4% spread = protocol revenue.
+Investors receive 8% annual yield. RainSafe negotiates 12% from DeFi protocols → 4% spread = protocol revenue.
 
 **C. Climate Data API (Phase 2)**
-Tamper-proof on-chain climate events → B2B data layer for governments, NGOs, insurers.
+Tamper-proof on-chain climate events → B2B data layer for governments, NGOs, and insurers.
 
 **D. White Label Infrastructure (Phase 3)**
 Cooperatives and microfinance institutions deploy their own pools via RainSafe.
@@ -139,7 +162,7 @@ The bot auto-detects language from Telegram's `language_code` and supports manua
 2. Location (Google Maps link / pin / coordinates)
 3. Coverage: 50 / 100 / 200 HBAR
 4. GPS photo verification
-5. HashPack wallet (`0.0.XXXXXXX`) or EVM address — auto-created if none
+5. HashPack wallet (`0.0.XXXXXXX`) or EVM address — **auto-created if none** via `AccountCreateTransaction`
 
 ---
 
@@ -156,11 +179,11 @@ Farmers can raise disputes via `/disputa` command or the web dashboard. All disp
 
 | Component | Technology | Purpose |
 |---|---|---|
-| Blockchain | Hedera Hashgraph | Smart contracts, HCS, carbon-negative |
+| Blockchain | Hedera Hashgraph | Smart contracts (HSCS), HCS, carbon-negative |
 | Climate Data | Open-Meteo API | Free, global, real-time rainfall |
 | Bot | Telegram Bot API | Zero-friction onboarding (ES/EN/PT) |
 | Smart Contracts | Solidity + HSCS | Automated payouts, pool, fees |
-| Frontend | React + Vite | Real-time dashboard |
+| Frontend | React + Vite | Real-time dashboard (6 tabs) |
 | Backend | Express.js | Farm registry API |
 | Deployment | Vercel + GitHub Pages | Dashboard + landing |
 
@@ -176,10 +199,10 @@ Farmers can raise disputes via `/disputa` command or the web dashboard. All disp
 - 30-day carencia period (industry standard)
 - 3-tier insurance pool
 - Dispute mechanism (on-chain record)
-- Multilingual dashboard
+- Multilingual dashboard (6 tabs)
 - Smart contract payouts on Hedera testnet
-- Auto wallet creation for unbanked farmers (Hedera AccountCreateTransaction)
-- Payouts sent directly to farmer wallet (on-chain)
+- Auto wallet creation for unbanked farmers (`AccountCreateTransaction`)
+- Payouts sent directly to farmer wallet via dedicated `payoutAddress` field in contract
 
 ### 🔄 Phase 2 — Actuarial Calibration
 - Historical drought analysis by region (10-year data)
@@ -225,17 +248,19 @@ cd rainsafe
 npm install
 cd frontend && npm install && cd ..
 cp .env.example .env
-# Fill credentials
+# Fill in your credentials (see .env.example)
 
-# Deploy contracts (v2 — fee + carencia)
-node scripts/deploy-v2.js
+# Contracts already deployed on testnet — skip deploy unless redeploying
+# node scripts/deploy-v2.js
 
 # Run all services
-node server.js          # Terminal 1 — API :3001
-node agent/bot.js       # Terminal 2 — Telegram bot
-node agent/monitor.js   # Terminal 3 — Climate monitor
+node server.js              # Terminal 1 — API :3001
+node agent/bot.js           # Terminal 2 — Telegram bot
+node agent/monitor.js       # Terminal 3 — Climate monitor (optional)
 cd frontend && npm run dev  # Terminal 4 — Dashboard :3000
 ```
+
+**Demo without credentials:** The dashboard at [rainsafe-frontend.vercel.app](https://rainsafe-frontend.vercel.app) works without any setup. The Telegram bot [@RainSafeHedera_bot](https://t.me/RainSafeHedera_bot) is live and functional.
 
 ---
 
@@ -244,34 +269,41 @@ cd frontend && npm run dev  # Terminal 4 — Dashboard :3000
 ```
 rainsafe/
 ├── agent/
-│   ├── bot.js          # Multilingual Telegram bot (ES/EN/PT) + disputes
+│   ├── bot.js          # Multilingual Telegram bot (ES/EN/PT) + disputes + auto wallet
 │   ├── monitor.js      # Climate monitoring agent (6h loop)
 │   ├── weather.js      # Open-Meteo API client
-│   └── hedera.js       # Hedera SDK client
+│   └── hedera.js       # Hedera SDK (registerFarm, payout, HCS, createWallet)
 ├── contracts/
-│   ├── RainSafe.sol    # Core contract v2 (3% fee, 30d carencia, disputes)
-│   └── RainSafePool.sol # Pool contract v2 (3-tier, fee, yield)
+│   ├── RainSafe.sol    # Core contract v3 (3% fee, 30d carencia, payoutAddress, disputes)
+│   └── RainSafePool.sol # Pool contract v3 (3-tier, fee, yield)
+├── data/
+│   ├── farms.json      # Farm registry (persisted by server.js + monitor.js)
+│   ├── payouts.json    # Payout history
+│   └── disputes.json   # Dispute log
 ├── frontend/src/
-│   ├── App.jsx         # Main app (6 tabs, protocol banner)
+│   ├── App.jsx         # Main app (6 tabs, protocol banner, multilingual)
 │   └── components/
-│       ├── Dashboard.jsx
-│       ├── PoolDashboard.jsx   # Pool + fee breakdown
+│       ├── Dashboard.jsx       # Farm cards with real-time weather
+│       ├── PoolDashboard.jsx   # Pool + MetaMask + fee breakdown
 │       ├── DisputeCenter.jsx   # Dispute filing + tracking
-│       ├── ClimateScore.jsx
-│       ├── PayoutHistory.jsx   # Shows gross/net/fee per payout
-│       └── RegisterFarm.jsx
+│       ├── ClimateScore.jsx    # Resilience score per farm
+│       ├── PayoutHistory.jsx   # Gross/net/fee per payout
+│       └── RegisterFarm.jsx    # Farm registration form
 ├── scripts/
-│   └── deploy-v2.js    # Deploy both contracts + HCS topics
-├── server.js           # Express API
+│   ├── deploy-v2.js    # Deploy both contracts + HCS topics
+│   ├── fund-contract.js # Fund contracts with HBAR
+│   └── update-ids.js   # Post-deploy: sync contract IDs across all files
+├── server.js           # Express API (:3001)
 ├── index.html          # Landing page (GitHub Pages)
-└── .env.example
+├── vercel.json         # Vercel config (serves frontend/dist)
+└── .env.example        # All required environment variables
 ```
 
 ---
 
 ## Real-World Validation
 
-**Finca San Antonio, Salento, Colombia** (4.585518, -75.640176) — Real farm registered during development. Current rainfall: 37.1mm/7d → NORMAL ✅
+**Finca San Antonio, Salento, Colombia** (4.585518, -75.640176) — Real farm registered on-chain during development. TX verifiable on HashScan. Current rainfall: 37.1mm/7d → NORMAL ✅
 
 **Finca El Progreso, Bogotá, Colombia** (4.711, -74.0721) — Demo farm in drought zone. Current rainfall: 2.3mm/7d → DROUGHT ALERT 🚨
 
