@@ -24,7 +24,7 @@ export default function DisputeCenter({ farms }) {
     setSubmitting(true);
     setResult(null);
 
-    const farm = farms.find(f => String(f.id) === form.farmId);
+    const farm = farms.find(f => String(f.onChainId ?? f.id) === form.farmId);
 
     try {
       const res = await fetch(`${API_URL}/api/disputes`, {
@@ -71,8 +71,8 @@ export default function DisputeCenter({ farms }) {
               style={{ width: "100%", background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 14px", color: "var(--text)", fontFamily: "var(--font)", fontSize: "0.9rem", outline: "none" }}
             >
               <option value="">-- Choose your farm --</option>
-              {farms.map(f => (
-                <option key={f.id} value={f.id}>{f.name} · {f.location}</option>
+              {farms.filter(f => f.onChainId != null).map(f => (
+                <option key={f.onChainId} value={f.onChainId}>{f.name} · {f.location}</option>
               ))}
             </select>
           </div>
