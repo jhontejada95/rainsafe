@@ -22,6 +22,12 @@ const FALLBACK_FARMS = [
   { id: 2, name: "Parcela San Miguel", location: "Oaxaca, México", latitude: 17.0732, longitude: -96.7266, hcsTopicId: process.env.HCS_TOPIC_FARM_2 || null, coverageHbar: 100 },
 ];
 
+const HCS_TOPICS = [
+  process.env.HCS_TOPIC_FARM_0,
+  process.env.HCS_TOPIC_FARM_1,
+  process.env.HCS_TOPIC_FARM_2,
+];
+
 function loadFarms() {
   try {
     if (!fs.existsSync(FARMS_FILE)) return FALLBACK_FARMS;
@@ -33,7 +39,7 @@ function loadFarms() {
       location: f.location,
       latitude: parseFloat(f.lat || f.latitude || 0),
       longitude: parseFloat(f.lon || f.lng || f.longitude || 0),
-      hcsTopicId: process.env[`HCS_TOPIC_FARM_${i % 3}`] || process.env.HCS_TOPIC_FARM_0 || null,
+      hcsTopicId: HCS_TOPICS[i % 3] || HCS_TOPICS[0] || null,
       coverageHbar: f.coverage || f.coverageHbar || 100,
     })).filter(f => f.latitude !== 0 || f.longitude !== 0);
   } catch (e) {
