@@ -33,7 +33,7 @@ function loadFarms() {
       location: f.location,
       latitude: parseFloat(f.lat || f.latitude || 0),
       longitude: parseFloat(f.lon || f.lng || f.longitude || 0),
-      hcsTopicId: process.env.HCS_TOPIC_FARM_0 || null,
+      hcsTopicId: process.env[`HCS_TOPIC_FARM_${i % 3}`] || process.env.HCS_TOPIC_FARM_0 || null,
       coverageHbar: f.coverage || f.coverageHbar || 100,
     })).filter(f => f.latitude !== 0 || f.longitude !== 0);
   } catch (e) {

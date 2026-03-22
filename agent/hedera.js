@@ -75,7 +75,7 @@ async function registerFarmOnChain(farmData) {
         .digest("hex")
         .substring(0, 16);
 
-    const walletAddress = farmData.wallet || "0.0.0";
+    const walletAddress = farmData.wallet || process.env.HEDERA_ACCOUNT_ID;
     const payoutEvmAddress = walletToEvmAddress(walletAddress);
 
     console.log(`🔗 Registering ${farmData.name} on-chain...`);
@@ -153,13 +153,14 @@ async function raiseDisputeOnChain(farmId, reason) {
     const client = getClient();
     const tx = await new ContractExecuteTransaction()
       .setContractId(process.env.CONTRACT_ID)
-      .setGas(150000)
+      .setGas(400000)
       .setFunction("raiseDispute",
         new ContractFunctionParameters().addUint256(farmId).addString(reason))
       .execute(client);
     const txId = tx.transactionId.toString();
     console.log(`⚖️  Dispute raised on-chain. TX: ${txId}`);
-    return { txId, hashscanUrl: `https://hashscan.io/testnet/transaction/${txId}` };
+    const hashscanUrl = `https://hashscan.io/testnet/transaction/${txId.replace("@", "-").replace(/\./g, "-")}`;
+    return { txId, hashscanUrl };
   } catch (err) {
     console.log(`⚠️  Dispute skipped: ${err.message}`);
     return null;
@@ -172,7 +173,7 @@ async function triggerPayout(farmId, eventType, hcsTopicId) {
     const client = getClient();
     const tx = await new ContractExecuteTransaction()
       .setContractId(process.env.CONTRACT_ID)
-      .setGas(200000)
+      .setGas(500000)
       .setFunction("triggerClimateEvent",
         new ContractFunctionParameters()
           .addUint256(farmId)

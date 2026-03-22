@@ -74,7 +74,8 @@ async function evaluateClimateCondition(latitude, longitude) {
   }
 
   // Check flood (any single day > threshold)
-  const maxDaily = Math.max(...history.precipitation.filter(Boolean));
+  const filtered = history.precipitation.filter(v => v != null && v > 0);
+  const maxDaily = filtered.length > 0 ? Math.max(...filtered) : 0;
   if (maxDaily > FLOOD_THRESHOLD) {
     status = "alert";
     eventType = "flood";
