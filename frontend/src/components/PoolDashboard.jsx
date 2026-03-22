@@ -1,5 +1,92 @@
-// PoolDashboard.jsx v2 — with fee breakdown and carencia info
+// PoolDashboard.jsx v2 — with fee breakdown, carencia info, and MetaMask wallet
+import { useState } from "react";
+
+const POOL_CONTRACT_ADDRESS = "0x00000000000000000000000000000000007F06C7"; // 0.0.8324807
+const HEDERA_TESTNET = {
+  chainId: "0x128", // 296
+  chainName: "Hedera Testnet",
+  rpcUrls: ["https://testnet.hashio.io/api"],
+  nativeCurrency: { name: "HBAR", symbol: "HBAR", decimals: 18 },
+  blockExplorerUrls: ["https://hashscan.io/testnet"],
+};
+
+const POOL_ABI = [
+  "function fundAsONG() payable",
+  "function depositAsInvestor() payable",
+  "function claimYield()",
+  "function payPremium() payable",
+  "function pendingYield(address) view returns (uint256)",
+];
+
+async function ensureHederaNetwork() {
+  try {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: HEDERA_TESTNET.chainId }],
+    });
+  } catch (e) {
+    if (e.code === 4902) {
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [HEDERA_TESTNET],
+      });
+    }
+  }
+}
+
 export default function PoolDashboard({ farms = [] }) {
+  const [wallet, setWallet] = useState(null);
+  const [txStatus, setTxStatus] = useState(null);
+  const [pendingYield, setPendingYield] = useState(null);
+  const [calling, setCalling] = useState(false);
+
+  const connectWallet = async () => {
+    if (!window.ethereum) {
+      setTxStatus({ error: "MetaMask not found. Install it from metamask.io" });
+      return;
+    }
+    try {
+      await ensureHederaNetwork();
+      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+      setWallet(accounts[0]);
+      setTxStatus(null);
+      // Check pending yield
+      const { ethers } = await import("ethers");
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const contract = new ethers.Contract(POOL_CONTRACT_ADDRESS, POOL_ABI, provider);
+      const yieldWei = await contract.pendingYield(accounts[0]);
+      setPendingYield(Number(ethers.formatEther(yieldWei)).toFixed(4));
+    } catch (e) {
+      setTxStatus({ error: e.message });
+    }
+  };
+
+  const callPool = async (fnName, amountHbar) => {
+    if (!wallet) { await connectWallet(); return; }
+    setCalling(true);
+    setTxStatus(null);
+    try {
+      const { ethers } = await import("ethers");
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(POOL_CONTRACT_ADDRESS, POOL_ABI, signer);
+      const valueWei = amountHbar ? ethers.parseEther(amountHbar.toString()) : undefined;
+      const tx = valueWei
+        ? await contract[fnName]({ value: valueWei })
+        : await contract[fnName]();
+      setTxStatus({ msg: "⏳ Transaction submitted..." });
+      await tx.wait();
+      setTxStatus({
+        msg: `✅ ${fnName}() confirmed!`,
+        url: `https://hashscan.io/testnet/transaction/${tx.hash}`,
+      });
+    } catch (e) {
+      setTxStatus({ error: `❌ ${e.shortMessage || e.message}` });
+    } finally {
+      setCalling(false);
+    }
+  };
+
   const HBAR_USD = 0.093;
   const FEE_PCT = 3;
 
@@ -134,27 +221,60 @@ export default function PoolDashboard({ farms = [] }) {
         </div>
       </div>
 
-      {/* CTA */}
+      {/* Wallet Connect + Fund the Pool */}
       <div style={s()}>
-        <h3 style={{ fontWeight: 700, marginBottom: "0.5rem" }}>Fund the Pool</h3>
-        <p style={{ fontSize: "0.85rem", color: "var(--text-dim)", marginBottom: "1.25rem" }}>Support climate resilience for smallholder farmers worldwide.</p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <h3 style={{ fontWeight: 700, marginBottom: "0.25rem" }}>Fund the Pool</h3>
+            <p style={{ fontSize: "0.82rem", color: "var(--text-dim)" }}>Connect MetaMask on Hedera Testnet to interact directly.</p>
+          </div>
+          <button
+            onClick={connectWallet}
+            style={{ background: wallet ? "var(--green-glow)" : "var(--green)", color: wallet ? "var(--green)" : "#000", border: wallet ? "1px solid var(--green)" : "none", borderRadius: 10, padding: "10px 20px", fontFamily: "var(--font)", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}
+          >
+            {wallet ? `✅ ${wallet.slice(0, 6)}...${wallet.slice(-4)}` : "Connect MetaMask →"}
+          </button>
+        </div>
+
+        {pendingYield && Number(pendingYield) > 0 && (
+          <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 10, padding: "10px 16px", marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "0.85rem", color: "#f59e0b" }}>💰 Pending yield: <b>{pendingYield} HBAR</b></span>
+            <button onClick={() => callPool("claimYield", null)} disabled={calling} style={{ background: "#f59e0b", color: "#000", border: "none", borderRadius: 8, padding: "6px 14px", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}>
+              Claim Yield
+            </button>
+          </div>
+        )}
+
+        {txStatus && (
+          <div style={{ background: txStatus.error ? "rgba(239,68,68,0.1)" : "var(--green-glow)", border: `1px solid ${txStatus.error ? "#ef4444" : "var(--green)"}`, borderRadius: 10, padding: "10px 16px", marginBottom: "1rem", fontSize: "0.82rem", color: txStatus.error ? "#ef4444" : "var(--green)" }}>
+            {txStatus.error || txStatus.msg}
+            {txStatus.url && <a href={txStatus.url} target="_blank" rel="noreferrer" style={{ display: "block", marginTop: 4, color: "var(--green)", fontSize: "0.75rem" }}>🔗 View on HashScan →</a>}
+          </div>
+        )}
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
           {[
-            { label: "As ONG / Grant", color: "#60a5fa", desc: "Impact reporting on-chain", fn: "fundAsONG()", href: `https://hashscan.io/testnet/contract/${poolData.poolContractId}` },
-            { label: "As ESG Investor", color: "#f59e0b", desc: "~8% yield + impact", fn: "depositAsInvestor()", href: `https://hashscan.io/testnet/contract/${poolData.poolContractId}` },
-            { label: "As Farmer", color: "#22c55e", desc: "Via @RainSafeHedera_bot", fn: "payPremium()", href: "https://t.me/RainSafeHedera_bot" },
+            { label: "As ONG / Grant", color: "#60a5fa", desc: "Impact reporting on-chain", fn: "fundAsONG", display: "fundAsONG()", amount: 10 },
+            { label: "As ESG Investor", color: "#f59e0b", desc: "~8% yield + impact", fn: "depositAsInvestor", display: "depositAsInvestor()", amount: 10 },
+            { label: "As Farmer", color: "#22c55e", desc: "10 HBAR premium", fn: "payPremium", display: "payPremium()", amount: 10 },
           ].map(cta => (
-            <a key={cta.label} href={cta.href} target="_blank" rel="noreferrer" style={{ textDecoration: "none", background: "var(--bg3)", borderRadius: 12, padding: "1rem", textAlign: "center", border: `1px solid ${cta.color}33`, display: "block", transition: "border-color 0.2s", cursor: "pointer" }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = cta.color}
-              onMouseLeave={e => e.currentTarget.style.borderColor = `${cta.color}33`}
-            >
+            <div key={cta.label} style={{ background: "var(--bg3)", borderRadius: 12, padding: "1rem", textAlign: "center", border: `1px solid ${cta.color}33` }}>
               <div style={{ fontWeight: 700, color: cta.color, marginBottom: 4, fontSize: "0.85rem" }}>{cta.label}</div>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginBottom: 8 }}>{cta.desc}</div>
-              <div style={{ fontSize: "0.68rem", fontFamily: "var(--mono)", color: cta.color, background: `${cta.color}22`, borderRadius: 6, padding: "3px 8px" }}>{cta.fn}</div>
-              <div style={{ fontSize: "0.65rem", fontFamily: "var(--mono)", color: "var(--text-dim)", marginTop: 4 }}>{cta.fn === "payPremium()" ? "@RainSafeHedera_bot" : poolData.poolContractId}</div>
-            </a>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginBottom: 10 }}>{cta.desc}</div>
+              <button
+                onClick={() => callPool(cta.fn, cta.amount)}
+                disabled={calling}
+                style={{ width: "100%", background: calling ? "var(--bg2)" : `${cta.color}22`, color: calling ? "var(--text-dim)" : cta.color, border: `1px solid ${cta.color}44`, borderRadius: 8, padding: "7px", fontFamily: "var(--mono)", fontSize: "0.72rem", fontWeight: 700, cursor: calling ? "not-allowed" : "pointer" }}
+              >
+                {calling ? "⏳..." : cta.display}
+              </button>
+              <div style={{ fontSize: "0.62rem", fontFamily: "var(--mono)", color: "var(--text-dim)", marginTop: 6 }}>{poolData.poolContractId}</div>
+            </div>
           ))}
         </div>
+        <p style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontFamily: "var(--mono)", marginTop: "1rem", textAlign: "center" }}>
+          Requires MetaMask · Hedera Testnet (chainId 296) · Contract {poolData.poolContractId}
+        </p>
       </div>
     </div>
   );

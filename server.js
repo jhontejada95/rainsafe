@@ -6,7 +6,7 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const cors = require("cors");
-const { raiseDisputeOnChain } = require("./agent/hedera");
+const { raiseDisputeOnChain, registerFarmOnChain } = require("./agent/hedera");
 
 const app = express();
 app.use(cors());
@@ -14,6 +14,7 @@ app.use(express.json());
 
 const FARMS_FILE = path.join(__dirname, "data/farms.json");
 const DISPUTES_FILE = path.join(__dirname, "data/disputes.json");
+const PAYOUTS_FILE = path.join(__dirname, "data/payouts.json");
 
 // ─── Ensure data directory exists ─────────────────────────────────────────────
 
@@ -43,6 +44,16 @@ function readFarms() {
   }
 }
 
+function readPayouts() {
+  ensureDataDir();
+  try {
+    if (!fs.existsSync(PAYOUTS_FILE)) return [];
+    return JSON.parse(fs.readFileSync(PAYOUTS_FILE, "utf8"));
+  } catch {
+    return [];
+  }
+}
+
 function writeFarms(farms) {
   ensureDataDir();
   fs.writeFileSync(FARMS_FILE, JSON.stringify(farms, null, 2));
@@ -56,8 +67,8 @@ app.get("/api/farms", (req, res) => {
   res.json(farms);
 });
 
-// POST register new farm (called by bot)
-app.post("/api/farms", (req, res) => {
+// POST register new farm (called by bot or dashboard)
+app.post("/api/farms", async (req, res) => {
   const farms = readFarms();
   const farm = {
     id: Date.now(),
@@ -66,7 +77,27 @@ app.post("/api/farms", (req, res) => {
   };
   farms.push(farm);
   writeFarms(farms);
-  console.log(`✅ Farm registered: ${farm.name}`);
+
+  // If coming from dashboard (no txId yet), register on-chain
+  if (!farm.txId && farm.source === "dashboard") {
+    try {
+      const result = await registerFarmOnChain(farm);
+      if (result) {
+        farm.txId = result.txId;
+        farm.hashscanUrl = result.hashscanUrl;
+        const idx = readFarms().findIndex(f => f.id === farm.id);
+        if (idx !== -1) {
+          const updated = readFarms();
+          updated[idx] = { ...updated[idx], txId: result.txId, hashscanUrl: result.hashscanUrl };
+          writeFarms(updated);
+        }
+      }
+    } catch (e) {
+      console.warn("On-chain registration skipped:", e.message);
+    }
+  }
+
+  console.log(`✅ Farm registered: ${farm.name}${farm.txId ? " (on-chain)" : ""}`);
   res.json({ success: true, farm });
 });
 
@@ -87,6 +118,11 @@ app.delete("/api/farms/:id", (req, res) => {
   farms = farms.filter(f => f.id !== parseInt(req.params.id));
   writeFarms(farms);
   res.json({ success: true });
+});
+
+// GET payouts history
+app.get("/api/payouts", (_req, res) => {
+  res.json(readPayouts());
 });
 
 // GET all disputes

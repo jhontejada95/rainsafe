@@ -5,6 +5,7 @@
   "main": "agent/monitor.js",
   "scripts": {
     "deploy": "node scripts/deploy-v2.js",
+    "fund": "node scripts/fund-contract.js",
     "agent": "node agent/monitor.js",
     "server": "node server.js",
     "bot": "node agent/bot.js",

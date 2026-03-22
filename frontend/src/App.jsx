@@ -23,6 +23,17 @@ const DEMO_PAYOUTS = [
   },
 ];
 
+async function fetchPayoutsFromAPI() {
+  try {
+    const res = await fetch(`${API_URL}/api/payouts`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.length > 0 ? data : null;
+  } catch {
+    return null;
+  }
+}
+
 function normalizeFarm(farm, index) {
   const now = Date.now();
   const coverageActivatesAt = farm.coverageActivatesAt
@@ -88,7 +99,7 @@ function ProtocolBanner({ farms, apiOnline }) {
 export default function App() {
   const [tab, setTab] = useState("dashboard");
   const [farms, setFarms] = useState([]);
-  const [payouts] = useState(DEMO_PAYOUTS);
+  const [payouts, setPayouts] = useState(DEMO_PAYOUTS);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [apiOnline, setApiOnline] = useState(false);
@@ -101,6 +112,8 @@ export default function App() {
       setFarms(data.map(normalizeFarm));
       setLastUpdated(new Date());
       setApiOnline(true);
+      const realPayouts = await fetchPayoutsFromAPI();
+      if (realPayouts) setPayouts(realPayouts);
     } catch {
       setApiOnline(false);
       if (farms.length === 0) {

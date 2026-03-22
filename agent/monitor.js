@@ -14,6 +14,7 @@ const {
 // ─── Farm registry — reads from farms.json (real registered farms) ────────────
 
 const FARMS_FILE = path.join(__dirname, "../data/farms.json");
+const PAYOUTS_FILE = path.join(__dirname, "../data/payouts.json");
 
 const FALLBACK_FARMS = [
   { id: 0, name: "Finca El Progreso", location: "Bogotá, Colombia", latitude: 4.711, longitude: -74.0721, hcsTopicId: process.env.HCS_TOPIC_FARM_0 || null, coverageHbar: 100 },
@@ -42,6 +43,54 @@ function loadFarms() {
 }
 
 const processedEvents = new Set();
+
+function updateFarmWeather(farmName, weatherData, score) {
+  try {
+    if (!fs.existsSync(FARMS_FILE)) return;
+    const farms = JSON.parse(fs.readFileSync(FARMS_FILE, "utf8"));
+    const idx = farms.findIndex(f => f.name === farmName);
+    if (idx !== -1) {
+      farms[idx].totalMm = parseFloat(weatherData.totalMm.toFixed(1));
+      farms[idx].status = weatherData.status === "alert" ? "alert"
+        : weatherData.status === "warning" ? "warning" : "normal";
+      farms[idx].eventType = weatherData.eventType || null;
+      farms[idx].resilienceScore = score;
+      farms[idx].lastMonitored = new Date().toISOString();
+      fs.writeFileSync(FARMS_FILE, JSON.stringify(farms, null, 2));
+    }
+  } catch (e) {
+    console.warn("Could not update farms.json:", e.message);
+  }
+}
+
+function recordPayout(farm, eventType, txId, hcsSequence) {
+  try {
+    let payouts = [];
+    if (fs.existsSync(PAYOUTS_FILE)) {
+      try { payouts = JSON.parse(fs.readFileSync(PAYOUTS_FILE, "utf8")); } catch {}
+    }
+    const gross = farm.coverageHbar || 100;
+    payouts.unshift({
+      id: Date.now(),
+      farmName: farm.name,
+      farmLocation: farm.location,
+      eventType,
+      amount: Math.round(gross * 0.97),
+      fee: Math.round(gross * 0.03),
+      gross,
+      date: new Date().toISOString().split("T")[0],
+      hcsSequence: hcsSequence || null,
+      txHash: txId ? `${process.env.CONTRACT_ID || "0.0.8324803"}@${Math.floor(Date.now() / 1000)}` : null,
+      txId: txId || null,
+    });
+    const dir = require("path").dirname(PAYOUTS_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(PAYOUTS_FILE, JSON.stringify(payouts, null, 2));
+    console.log(`   💾 Payout recorded to payouts.json`);
+  } catch (e) {
+    console.warn("Could not write payouts.json:", e.message);
+  }
+}
 
 // ─── AI Resilience Score Engine ──────────────────────────────────────────────
 
@@ -85,6 +134,9 @@ async function monitorFarm(farm, eventHistory) {
     const score = computeResilienceScore(farm, weather, eventHistory);
     console.log(`   🧠 Resilience Score: ${score}/100`);
 
+    // Persist weather + score to farms.json so dashboard shows real data
+    updateFarmWeather(farm.name, weather, score);
+
     // Only call contract if CONTRACT_ID is set
     if (process.env.CONTRACT_ID) {
       await updateResilienceScore(farm.id, score);
@@ -120,13 +172,18 @@ async function monitorFarm(farm, eventHistory) {
       }
 
       // Trigger payout via smart contract
+      let payoutTxId = null;
       if (process.env.CONTRACT_ID) {
         try {
-          await triggerPayout(farm.id, weather.eventType, farm.hcsTopicId || "demo");
+          const payoutResult = await triggerPayout(farm.id, weather.eventType, farm.hcsTopicId || "demo");
+          if (payoutResult) payoutTxId = payoutResult.txId;
         } catch (payErr) {
           console.log(`   ⚠️  Payout skipped: ${payErr.message}`);
         }
       }
+
+      // Record payout to payouts.json so dashboard shows real history
+      recordPayout(farm, weather.eventType, payoutTxId, hcsSequence);
 
       processedEvents.add(key);
       eventHistory.push({ farmId: farm.id, eventType: weather.eventType, timestamp: Date.now() });
