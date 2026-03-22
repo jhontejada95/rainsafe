@@ -258,7 +258,6 @@ export default function PoolDashboard({ farms = [] }) {
           {[
             { label: "As ONG / Grant", color: "#60a5fa", desc: "Impact reporting on-chain", fn: "fundAsONG", display: "fundAsONG()", amount: 10 },
             { label: "As ESG Investor", color: "#f59e0b", desc: "~8% yield + impact", fn: "depositAsInvestor", display: "depositAsInvestor()", amount: 10 },
-            { label: "As Farmer", color: "#22c55e", desc: "10 HBAR premium", fn: "payPremium", display: "payPremium()", amount: 10 },
           ].map(cta => (
             <div key={cta.label} style={{ background: "var(--bg3)", borderRadius: 12, padding: "1rem", textAlign: "center", border: `1px solid ${cta.color}33` }}>
               <div style={{ fontWeight: 700, color: cta.color, marginBottom: 4, fontSize: "0.85rem" }}>{cta.label}</div>
@@ -273,6 +272,18 @@ export default function PoolDashboard({ farms = [] }) {
               <div style={{ fontSize: "0.62rem", fontFamily: "var(--mono)", color: "var(--text-dim)", marginTop: 6 }}>{poolData.poolContractId}</div>
             </div>
           ))}
+          {/* Farmer premium — paid via Telegram bot (1 tinyhbar workaround) */}
+          <div style={{ background: "var(--bg3)", borderRadius: 12, padding: "1rem", textAlign: "center", border: "1px solid #22c55e33" }}>
+            <div style={{ fontWeight: 700, color: "#22c55e", marginBottom: 4, fontSize: "0.85rem" }}>As Farmer</div>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginBottom: 10 }}>10 HBAR premium</div>
+            <button
+              disabled
+              style={{ width: "100%", background: "var(--bg2)", color: "var(--text-dim)", border: "1px solid #22c55e22", borderRadius: 8, padding: "7px", fontFamily: "var(--mono)", fontSize: "0.72rem", fontWeight: 700, cursor: "not-allowed" }}
+            >
+              via Telegram bot
+            </button>
+            <div style={{ fontSize: "0.62rem", fontFamily: "var(--mono)", color: "var(--text-dim)", marginTop: 6 }}>0.0.8329792</div>
+          </div>
         </div>
         <p style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontFamily: "var(--mono)", marginTop: "1rem", textAlign: "center" }}>
           Requires MetaMask · Hedera Testnet (chainId 296) · Contract {poolData.poolContractId}
