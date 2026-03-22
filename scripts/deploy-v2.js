@@ -22,6 +22,7 @@ async function compileContract(name) {
     sources: { [`${name}.sol`]: { content: src } },
     settings: {
       optimizer: { enabled: true, runs: 200 },
+      viaIR: true,
       outputSelection: { "*": { "*": ["abi", "evm.bytecode"] } },
     },
   };

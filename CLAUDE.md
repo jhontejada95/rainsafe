@@ -6,15 +6,15 @@ Hackathon: Hedera Hello Future Apex 2026. Deadline: lunes 24 marzo 11:59pm Colom
 Repo: https://github.com/jhontejada95/rainsafe
 
 ## Contratos desplegados (Hedera Testnet) — v2 ACTIVOS
-- Core: `0.0.8324803` → https://hashscan.io/testnet/contract/0.0.8324803
-- Pool: `0.0.8324807` → https://hashscan.io/testnet/contract/0.0.8324807
-- HCS topics: `0.0.8324808`, `0.0.8324810`, `0.0.8324811`
+- Core: `0.0.8329786` → https://hashscan.io/testnet/contract/0.0.8329786
+- Pool: `0.0.8329792` → https://hashscan.io/testnet/contract/0.0.8329792
+- HCS topics: `0.0.8329793`, `0.0.8329794`, `0.0.8329795`
 - Deployer: `0.0.8319187` (~601 HBAR disponibles)
 - EVM deployer: `0xc906d69a9b0dd7fdc73031788dfda9288e523044`
 
 ## Balances de contratos (fondeo manual hecho)
-- Core `0.0.8324803`: **200 HBAR** → puede pagar ~2 payouts de 100 HBAR
-- Pool `0.0.8324807`: **50 HBAR** → disponible para claimYield()
+- Core `0.0.8329786`: **200 HBAR** → puede pagar ~2 payouts de 100 HBAR
+- Pool `0.0.8329792`: **50 HBAR** → disponible para claimYield()
 - Para re-fondear: `node scripts/fund-contract.js [amount]` (ambos) o `node scripts/fund-contract.js 50 pool`
 
 ## URLs live
@@ -55,8 +55,8 @@ Para demo MVP: deployer recibe el payout y transfiere manualmente.
 ## Arquitectura completa
 ```
 Farmer → Telegram Bot (@RainSafeHedera_bot)
-         ↓ registerFarmOnChain() → Hedera Contract 0.0.8324803
-         ↓ recordClimateEventHCS() → HCS Topic 0.0.8324808
+         ↓ registerFarmOnChain() → Hedera Contract 0.0.8329786
+         ↓ recordClimateEventHCS() → HCS Topic 0.0.8329793
          ↓ POST /api/farms → Express API (server.js :3001)
          ↓ farms.json
          React Dashboard ← polls /api/farms every 10s
@@ -64,13 +64,13 @@ Farmer → Telegram Bot (@RainSafeHedera_bot)
 Open-Meteo API → monitor.js (6h loop)
          ↓ drought detected (<5mm/7d) → updateFarmWeather() → farms.json
          ↓ recordClimateEventHCS() → HCS topic
-         ↓ triggerPayout() → Contract 0.0.8324803
+         ↓ triggerPayout() → Contract 0.0.8329786
          ↓ recordPayout() → payouts.json
          React Dashboard ← /api/payouts
 
 Dashboard RegisterFarm tab → POST /api/farms → registerFarmOnChain() (source=dashboard)
 Dashboard DisputeCenter tab → POST /api/disputes → raiseDisputeOnChain() → Hedera
-Dashboard PoolDashboard tab → MetaMask (chainId 296) → ethers.js → Pool Contract 0.0.8324807
+Dashboard PoolDashboard tab → MetaMask (chainId 296) → ethers.js → Pool Contract 0.0.8329792
 ```
 
 ## Fix clave en hedera.js
@@ -78,8 +78,8 @@ El contrato v2 tiene fee transfer que fallaba con HBAR reales.
 Solución: enviar `Hbar.fromTinybars(1)` como premium — satisface `require(msg.value > 0)` sin activar la transferencia del fee interno.
 
 ## Pool Contract EVM addresses (para MetaMask/ethers.js)
-- Core: `0x00000000000000000000000000000000007F06C3` (0.0.8324803)
-- Pool: `0x00000000000000000000000000000000007F06C7` (0.0.8324807)
+- Core: `0x00000000000000000000000000000000007f1a3a` (0.0.8329786)
+- Pool: `0x00000000000000000000000000000000007f1a40` (0.0.8329792)
 - Hedera Testnet RPC: `https://testnet.hashio.io/api`, chainId: 296
 
 ## Cómo correr el proyecto
@@ -117,11 +117,11 @@ npm run dev      # cd frontend && npm run dev
 ```
 HEDERA_ACCOUNT_ID=0.0.8319187
 HEDERA_PRIVATE_KEY=<ecdsa_key>
-CONTRACT_ID=0.0.8324803
-POOL_CONTRACT_ID=0.0.8324807
-HCS_TOPIC_FARM_0=0.0.8324808
-HCS_TOPIC_FARM_1=0.0.8324810
-HCS_TOPIC_FARM_2=0.0.8324811
+CONTRACT_ID=0.0.8329786
+POOL_CONTRACT_ID=0.0.8329792
+HCS_TOPIC_FARM_0=0.0.8329793
+HCS_TOPIC_FARM_1=0.0.8329794
+HCS_TOPIC_FARM_2=0.0.8329795
 TELEGRAM_BOT_TOKEN=<token>
 API_URL=http://localhost:3001
 API_PORT=3001

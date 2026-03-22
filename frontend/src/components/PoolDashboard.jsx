@@ -1,7 +1,7 @@
 // PoolDashboard.jsx v2 — with fee breakdown, carencia info, and MetaMask wallet
 import { useState } from "react";
 
-const POOL_CONTRACT_ADDRESS = "0x00000000000000000000000000000000007F06C7"; // 0.0.8324807
+const POOL_CONTRACT_ADDRESS = "0x00000000000000000000000000000000007f1a40"; // 0.0.8329792
 const HEDERA_TESTNET = {
   chainId: "0x128", // 296
   chainName: "Hedera Testnet",
@@ -104,7 +104,7 @@ export default function PoolDashboard({ farms = [] }) {
     totalPayouts: 200,
     totalFeesCollected: Math.round(totalFees + 18),
     activePolicies: activeFarms || 34,
-    poolContractId: "0.0.8324807",
+    poolContractId: "0.0.8329792",
     coreContractId: "0.0.8324803",
   };
 

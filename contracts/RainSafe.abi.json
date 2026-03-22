@@ -396,6 +396,11 @@
         "type": "string"
       },
       {
+        "internalType": "address",
+        "name": "payoutAddress",
+        "type": "address"
+      },
+      {
         "internalType": "string",
         "name": "parcelHash",
         "type": "string"
@@ -520,6 +525,11 @@
             "internalType": "string",
             "name": "walletAddress",
             "type": "string"
+          },
+          {
+            "internalType": "address",
+            "name": "payoutAddress",
+            "type": "address"
           },
           {
             "internalType": "string",
@@ -695,6 +705,11 @@
         "internalType": "uint256",
         "name": "_coverageAmount",
         "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_payoutAddress",
+        "type": "address"
       }
     ],
     "name": "registerFarm",

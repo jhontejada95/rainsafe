@@ -13,13 +13,13 @@ const DEMO_PAYOUTS = [
     id: 1, farmName: "Finca El Progreso", eventType: "drought",
     amount: 97, fee: 3, gross: 100,
     date: "2026-03-14", hcsSequence: "42",
-    txHash: "0.0.8324803@1710892800",
+    txHash: "0.0.8329786@1710892800",
   },
   {
     id: 2, farmName: "Parcela San Miguel", eventType: "drought",
     amount: 97, fee: 3, gross: 100,
     date: "2026-03-10", hcsSequence: "38",
-    txHash: "0.0.8324803@1709164800",
+    txHash: "0.0.8329786@1709164800",
   },
 ];
 
@@ -210,7 +210,7 @@ export default function App() {
         <span style={{ margin: "0 1rem" }}>·</span>
         <a href="https://t.me/RainSafeHedera_bot" target="_blank" rel="noreferrer" style={{ color: "var(--green)" }}>@RainSafeHedera_bot</a>
         <span style={{ margin: "0 1rem" }}>·</span>
-        <a href="https://hashscan.io/testnet/contract/0.0.8324803" target="_blank" rel="noreferrer" style={{ color: "var(--green)" }}>0.0.8324803</a>
+        <a href="https://hashscan.io/testnet/contract/0.0.8329786" target="_blank" rel="noreferrer" style={{ color: "var(--green)" }}>0.0.8329786</a>
       </footer>
 
       <style>{`
