@@ -1,0 +1,27 @@
+{
+  "name": "rainsafe",
+  "version": "1.0.0",
+  "description": "Parametric climate insurance for rural farming communities on Hedera",
+  "main": "agent/monitor.js",
+  "scripts": {
+    "deploy": "node scripts/deploy.js",
+    "agent": "node agent/monitor.js",
+    "dev": "cd frontend && npm run dev"
+  },
+  "dependencies": {
+    "@hashgraph/sdk": "^2.50.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.5",
+    "express": "^5.2.1",
+    "node-fetch": "^3.3.2",
+    "node-telegram-bot-api": "^0.67.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^7.0.0",
+    "hardhat": "^3.2.0",
+    "solc": "^0.8.20"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
