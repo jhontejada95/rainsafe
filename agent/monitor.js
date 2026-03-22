@@ -86,7 +86,7 @@ function recordPayout(farm, eventType, txId, hcsSequence) {
       gross,
       date: new Date().toISOString().split("T")[0],
       hcsSequence: hcsSequence || null,
-      txHash: txId ? `${process.env.CONTRACT_ID || "0.0.8324803"}@${Math.floor(Date.now() / 1000)}` : null,
+      txHash: txId ? `${process.env.CONTRACT_ID || "0.0.8329786"}@${Math.floor(Date.now() / 1000)}` : null,
       txId: txId || null,
     });
     const dir = require("path").dirname(PAYOUTS_FILE);

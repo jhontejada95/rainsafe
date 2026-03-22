@@ -16,8 +16,8 @@ const {
 } = require("@hashgraph/sdk");
 
 const CONTRACTS = {
-  core: { id: process.env.CONTRACT_ID || "0.0.8324803", label: "Core (RainSafe.sol)" },
-  pool: { id: process.env.POOL_CONTRACT_ID || "0.0.8324807", label: "Pool (RainSafePool.sol)" },
+  core: { id: process.env.CONTRACT_ID || "0.0.8329786", label: "Core (RainSafe.sol)" },
+  pool: { id: process.env.POOL_CONTRACT_ID || "0.0.8329792", label: "Pool (RainSafePool.sol)" },
 };
 
 async function getBalance(client, accountId) {
