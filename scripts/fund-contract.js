@@ -1,6 +1,9 @@
-// fund-contract.js — Send HBAR to RainSafe contract so it can pay out
-// Usage: node scripts/fund-contract.js [amount_hbar]
-// Default: 50 HBAR
+// fund-contract.js — Fund all RainSafe contracts for demo
+// Usage:
+//   node scripts/fund-contract.js           → fund all contracts (50 HBAR each)
+//   node scripts/fund-contract.js 100       → fund all contracts (100 HBAR each)
+//   node scripts/fund-contract.js 50 core   → fund only core contract
+//   node scripts/fund-contract.js 50 pool   → fund only pool contract
 
 require("dotenv").config();
 const {
@@ -12,9 +15,40 @@ const {
   AccountBalanceQuery,
 } = require("@hashgraph/sdk");
 
+const CONTRACTS = {
+  core: { id: process.env.CONTRACT_ID || "0.0.8324803", label: "Core (RainSafe.sol)" },
+  pool: { id: process.env.POOL_CONTRACT_ID || "0.0.8324807", label: "Pool (RainSafePool.sol)" },
+};
+
+async function getBalance(client, accountId) {
+  const b = await new AccountBalanceQuery().setAccountId(AccountId.fromString(accountId)).execute(client);
+  return b.hbars.toString();
+}
+
+async function fundContract(client, fromId, contractId, label, amount) {
+  console.log(`\n📤 Funding ${label} (${contractId}) with ${amount} HBAR...`);
+  const before = await getBalance(client, contractId);
+  console.log(`   Before: ${before}`);
+
+  const tx = await new TransferTransaction()
+    .addHbarTransfer(AccountId.fromString(fromId), new Hbar(-amount))
+    .addHbarTransfer(AccountId.fromString(contractId), new Hbar(amount))
+    .execute(client);
+
+  const receipt = await tx.getReceipt(client);
+  const txId = tx.transactionId.toString();
+  const after = await getBalance(client, contractId);
+
+  console.log(`   ✅ Status: ${receipt.status}`);
+  console.log(`   After:  ${after}`);
+  console.log(`   TX: https://hashscan.io/testnet/transaction/${txId}`);
+  return { contractId, label, after, txId };
+}
+
 async function main() {
-  const amountHbar = parseFloat(process.argv[2]) || 50;
-  const contractId = process.env.CONTRACT_ID || "0.0.8324803";
+  const amount = parseFloat(process.argv[2]) || 50;
+  const target = process.argv[3]; // "core", "pool", or undefined (all)
+
   const accountId = process.env.HEDERA_ACCOUNT_ID;
   const privateKey = process.env.HEDERA_PRIVATE_KEY;
 
@@ -26,37 +60,31 @@ async function main() {
   const client = Client.forTestnet();
   client.setOperator(AccountId.fromString(accountId), PrivateKey.fromStringECDSA(privateKey));
 
-  // Check current balance
-  const contractBalance = await new AccountBalanceQuery()
-    .setAccountId(AccountId.fromString(contractId))
-    .execute(client);
-  const walletBalance = await new AccountBalanceQuery()
-    .setAccountId(AccountId.fromString(accountId))
-    .execute(client);
+  const deployerBalance = await getBalance(client, accountId);
+  console.log(`\n💼 Deployer: ${accountId}`);
+  console.log(`   Balance:  ${deployerBalance}`);
 
-  console.log(`\n💼 Deployer balance:  ${walletBalance.hbars.toString()}`);
-  console.log(`🏦 Contract balance:  ${contractBalance.hbars.toString()}`);
-  console.log(`\n📤 Sending ${amountHbar} HBAR to contract ${contractId}...`);
+  const toFund = target
+    ? Object.entries(CONTRACTS).filter(([key]) => key === target)
+    : Object.entries(CONTRACTS);
 
-  const tx = await new TransferTransaction()
-    .addHbarTransfer(AccountId.fromString(accountId), new Hbar(-amountHbar))
-    .addHbarTransfer(AccountId.fromString(contractId), new Hbar(amountHbar))
-    .execute(client);
+  if (toFund.length === 0) {
+    console.error(`❌ Unknown target "${target}". Use "core" or "pool".`);
+    process.exit(1);
+  }
 
-  const receipt = await tx.getReceipt(client);
-  const txId = tx.transactionId.toString();
+  const results = [];
+  for (const [, contract] of toFund) {
+    const result = await fundContract(client, accountId, contract.id, contract.label, amount);
+    results.push(result);
+  }
 
-  console.log(`✅ Transfer complete!`);
-  console.log(`   Status: ${receipt.status}`);
-  console.log(`   TX: ${txId}`);
-  console.log(`   HashScan: https://hashscan.io/testnet/transaction/${txId}`);
-
-  // Show new balance
-  const newBalance = await new AccountBalanceQuery()
-    .setAccountId(AccountId.fromString(contractId))
-    .execute(client);
-  console.log(`\n🏦 Contract new balance: ${newBalance.hbars.toString()}`);
-  console.log(`\n✅ Contract can now pay out up to ${Math.floor(amountHbar / 1.03)} HBAR in coverage.`);
+  const finalBalance = await getBalance(client, accountId);
+  console.log(`\n${"─".repeat(50)}`);
+  console.log(`✅ All contracts funded!`);
+  results.forEach(r => console.log(`   🏦 ${r.label}: ${r.after}`));
+  console.log(`   💼 Deployer remaining: ${finalBalance}`);
+  console.log(`\n🎯 Ready for demo! Each contract can pay out claims.`);
 }
 
 main().catch(err => {
