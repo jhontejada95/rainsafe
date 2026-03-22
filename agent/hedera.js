@@ -66,7 +66,10 @@ function walletToEvmAddress(walletStr) {
 }
 
 function hashscanTxUrl(txId) {
-  return `https://hashscan.io/testnet/transaction/${txId.replace("@", "-").replace(/\./g, "-")}`;
+  // TX ID format: "0.0.8319187@1774221600.755028458"
+  // HashScan expects: "0.0.8319187-1774221600-755028458"
+  const [account, timestamp = ""] = txId.split("@");
+  return `https://hashscan.io/testnet/transaction/${account}-${timestamp.replace(".", "-")}`;
 }
 
 async function registerFarmOnChain(farmData) {
