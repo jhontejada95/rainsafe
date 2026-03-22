@@ -1,240 +1,154 @@
-// PoolDashboard.jsx — Multi-source insurance pool page
-
-export default function PoolDashboard() {
+// PoolDashboard.jsx v2 — with fee breakdown and carencia info
+export default function PoolDashboard({ farms = [] }) {
   const HBAR_USD = 0.093;
+  const FEE_PCT = 3;
+
+  const activeFarms = farms.filter(f => f.status !== "carencia").length;
+  const inCarencia = farms.filter(f => f.status === "carencia").length;
+  const totalPremiums = farms.reduce((s, f) => s + (f.coverageHbar || 100) * 0.1, 0);
+  const totalFees = totalPremiums * (FEE_PCT / 100);
+  const netPremiums = totalPremiums - totalFees;
 
   const poolData = {
-    balance: 1240,
-    totalFromFarmers: 340,
+    balance: 1240 + Math.round(netPremiums),
+    totalFromFarmers: 340 + Math.round(netPremiums),
     totalFromONGs: 600,
     totalFromInvestors: 300,
     totalPayouts: 200,
-    activePolicies: 34,
-    contractId: "0.0.8324067",
+    totalFeesCollected: Math.round(totalFees + 18),
+    activePolicies: activeFarms || 34,
+    poolContractId: "0.0.8324807",
+    coreContractId: "0.0.8324803",
   };
 
   const sources = [
-    {
-      type: "🌱 Agricultores",
-      amount: poolData.totalFromFarmers,
-      color: "#22c55e",
-      desc: "Primas mensuales automáticas",
-      pct: Math.round((poolData.totalFromFarmers / poolData.balance) * 100),
-    },
-    {
-      type: "🤝 ONGs & Grants",
-      amount: poolData.totalFromONGs,
-      color: "#60a5fa",
-      desc: "CGIAR, GIZ, HBAR Foundation",
-      pct: Math.round((poolData.totalFromONGs / poolData.balance) * 100),
-    },
-    {
-      type: "📈 Inversores ESG",
-      amount: poolData.totalFromInvestors,
-      color: "#f59e0b",
-      desc: "Yield ~12% anual + impacto",
-      pct: Math.round((poolData.totalFromInvestors / poolData.balance) * 100),
-    },
+    { type: "🌱 Farmers", amount: poolData.totalFromFarmers, color: "#22c55e", desc: "Automatic monthly premiums (net of 3% fee)", pct: Math.round((poolData.totalFromFarmers / poolData.balance) * 100) },
+    { type: "🤝 ONGs & Grants", amount: poolData.totalFromONGs, color: "#60a5fa", desc: "CGIAR, GIZ, HBAR Foundation", pct: Math.round((poolData.totalFromONGs / poolData.balance) * 100) },
+    { type: "📈 ESG Investors", amount: poolData.totalFromInvestors, color: "#f59e0b", desc: "~8% annual yield + impact", pct: Math.round((poolData.totalFromInvestors / poolData.balance) * 100) },
   ];
 
   const tiers = [
-    {
-      tier: "Tier 1 — Primera pérdida",
-      source: "ONGs & Grants",
-      color: "#60a5fa",
-      desc: "Absorben primeros siniestros. Sin expectativa de retorno financiero. Reciben reportes de impacto verificables on-chain.",
-      risk: "Más alto",
-      return: "Solo impacto",
-    },
-    {
-      tier: "Tier 2 — Capital mezzanine",
-      source: "Inversores ESG",
-      color: "#f59e0b",
-      desc: "Entran después del Tier 1. Reciben yield de primas no reclamadas + rendimiento DeFi mientras el capital espera.",
-      risk: "Medio",
-      return: "~12% anual",
-    },
-    {
-      tier: "Tier 3 — Flujo continuo",
-      source: "Primas agricultores",
-      color: "#22c55e",
-      desc: "Primas automáticas on-chain. Se acumulan continuamente. Base predecible del pool.",
-      risk: "Bajo",
-      return: "Cobertura",
-    },
+    { tier: "Tier 1 — First Loss", source: "ONGs & Grants", color: "#60a5fa", desc: "Absorbs first claims. No financial return. Receives verifiable on-chain impact reports.", risk: "Highest", return: "Impact only" },
+    { tier: "Tier 2 — Mezzanine Capital", source: "ESG Investors", color: "#f59e0b", desc: "Enters after Tier 1. Earns yield from unclaimed premiums + DeFi yield while capital waits.", risk: "Medium", return: "~8% annual" },
+    { tier: "Tier 3 — Continuous Flow", source: "Farmer Premiums", color: "#22c55e", desc: "Automatic on-chain premiums. Accumulates continuously. Predictable pool base.", risk: "Low", return: "Coverage" },
   ];
 
   const impactNumbers = [
-    { label: "Agricultores cubiertos", value: poolData.activePolicies, icon: "🌾" },
+    { label: "Active policies", value: poolData.activePolicies, icon: "🌾" },
+    { label: "In carencia (30d)", value: inCarencia, icon: "⏳" },
     { label: "Pool total", value: `${poolData.balance} HBAR`, icon: "🏦" },
-    { label: "Capacidad de cobertura", value: `${poolData.balance * 10} HBAR`, icon: "🛡" },
-    { label: "Pagos ejecutados", value: `${poolData.totalPayouts} HBAR`, icon: "💸" },
-    { label: "Valor pool en USD", value: `$${(poolData.balance * HBAR_USD).toFixed(0)}`, icon: "💵" },
-    { label: "Países cubiertos", value: "3", icon: "🌎" },
+    { label: "Payouts executed", value: `${poolData.totalPayouts} HBAR`, icon: "💸" },
+    { label: "Protocol fees earned", value: `${poolData.totalFeesCollected} HBAR`, icon: "⚡" },
+    { label: "Pool value USD", value: `$${(poolData.balance * HBAR_USD).toFixed(0)}`, icon: "💵" },
   ];
 
+  const s = (v) => ({ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 16, padding: "1.5rem", ...(v || {}) });
+
   return (
-    <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+    <div style={{ maxWidth: 900, margin: "0 auto" }}>
       <div style={{ marginBottom: "2rem" }}>
-        <h2 style={{ fontWeight: 800, fontSize: "1.5rem", marginBottom: "0.5rem" }}>
-          Insurance Pool
-        </h2>
+        <h2 style={{ fontWeight: 800, fontSize: "1.5rem", marginBottom: "0.5rem" }}>🏦 Insurance Pool</h2>
         <p style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>
-          Multi-source parametric pool · Verified on Hedera ·{" "}
-          <a
-            href={`https://hashscan.io/testnet/contract/${poolData.contractId}`}
-            target="_blank"
-            rel="noreferrer"
-            style={{ color: "var(--green)", fontFamily: "var(--mono)", fontSize: "0.8rem" }}
-          >
-            {poolData.contractId}
-          </a>
+          Multi-source parametric pool · 3% protocol fee on all transactions ·{" "}
+          <a href={`https://hashscan.io/testnet/contract/${poolData.poolContractId}`} target="_blank" rel="noreferrer" style={{ color: "var(--green)", fontFamily: "var(--mono)", fontSize: "0.8rem" }}>{poolData.poolContractId}</a>
         </p>
       </div>
 
-      {/* Impact Numbers */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-        gap: "12px",
-        marginBottom: "2rem",
-      }}>
-        {impactNumbers.map((n) => (
-          <div key={n.label} style={{
-            background: "var(--bg2)", border: "1px solid var(--border)",
-            borderRadius: "12px", padding: "1rem", textAlign: "center",
-          }}>
-            <div style={{ fontSize: "1.5rem", marginBottom: "6px" }}>{n.icon}</div>
+      {/* Fee breakdown banner */}
+      <div style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 12, padding: "1rem 1.25rem", marginBottom: "1.5rem", display: "flex", gap: "2rem", flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontSize: "0.68rem", fontFamily: "var(--mono)", color: "var(--text-dim)" }}>PROTOCOL FEE</div>
+          <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--green)" }}>3%</div>
+          <div style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>on all premiums & payouts</div>
+        </div>
+        <div>
+          <div style={{ fontSize: "0.68rem", fontFamily: "var(--mono)", color: "var(--text-dim)" }}>FEES COLLECTED</div>
+          <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--green)" }}>{poolData.totalFeesCollected} HBAR</div>
+          <div style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>≈ ${(poolData.totalFeesCollected * HBAR_USD).toFixed(1)} USD</div>
+        </div>
+        <div>
+          <div style={{ fontSize: "0.68rem", fontFamily: "var(--mono)", color: "var(--text-dim)" }}>INVESTOR YIELD</div>
+          <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#f59e0b" }}>8%</div>
+          <div style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>annual to investors</div>
+        </div>
+        <div>
+          <div style={{ fontSize: "0.68rem", fontFamily: "var(--mono)", color: "var(--text-dim)" }}>YIELD SPREAD</div>
+          <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#f59e0b" }}>4%</div>
+          <div style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>protocol revenue</div>
+        </div>
+        <div>
+          <div style={{ fontSize: "0.68rem", fontFamily: "var(--mono)", color: "var(--text-dim)" }}>CARENCIA PERIOD</div>
+          <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--amber)" }}>30 days</div>
+          <div style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>industry standard</div>
+        </div>
+      </div>
+
+      {/* Impact numbers */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12, marginBottom: "1.5rem" }}>
+        {impactNumbers.map(n => (
+          <div key={n.label} style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 12, padding: "1rem", textAlign: "center" }}>
+            <div style={{ fontSize: "1.4rem", marginBottom: 6 }}>{n.icon}</div>
             <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--green)" }}>{n.value}</div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "4px" }}>{n.label}</div>
+            <div style={{ fontSize: "0.68rem", color: "var(--text-dim)", marginTop: 4 }}>{n.label}</div>
           </div>
         ))}
       </div>
 
       {/* Pool composition */}
-      <div style={{
-        background: "var(--bg2)", border: "1px solid var(--border)",
-        borderRadius: "16px", padding: "1.5rem", marginBottom: "1.5rem",
-      }}>
+      <div style={{ ...s(), marginBottom: "1.5rem" }}>
         <h3 style={{ fontWeight: 700, marginBottom: "1.25rem" }}>Pool Composition</h3>
-
-        {/* Bar */}
-        <div style={{
-          height: "12px", borderRadius: "6px", overflow: "hidden",
-          display: "flex", marginBottom: "1.5rem",
-          background: "var(--bg3)",
-        }}>
-          {sources.map((s) => (
-            <div key={s.type} style={{
-              width: `${s.pct}%`, background: s.color,
-              transition: "width 0.5s ease",
-            }} />
-          ))}
+        <div style={{ height: 12, borderRadius: 6, overflow: "hidden", display: "flex", marginBottom: "1.5rem", background: "var(--bg3)" }}>
+          {sources.map(s => <div key={s.type} style={{ width: `${s.pct}%`, background: s.color, transition: "width 0.5s" }} />)}
         </div>
-
-        {/* Sources */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          {sources.map((s) => (
-            <div key={s.type} style={{
-              display: "grid", gridTemplateColumns: "1fr auto auto",
-              alignItems: "center", gap: "1rem",
-            }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {sources.map(src => (
+            <div key={src.type} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", alignItems: "center", gap: "1rem" }}>
               <div>
-                <div style={{ fontWeight: 600, marginBottom: "2px" }}>{s.type}</div>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>{s.desc}</div>
+                <div style={{ fontWeight: 600, marginBottom: 2 }}>{src.type}</div>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>{src.desc}</div>
               </div>
-              <div style={{
-                fontFamily: "var(--mono)", fontSize: "0.85rem",
-                color: s.color, fontWeight: 700,
-              }}>
-                {s.amount} HBAR
-              </div>
-              <div style={{
-                fontFamily: "var(--mono)", fontSize: "0.75rem",
-                color: "var(--text-dim)",
-              }}>
-                {s.pct}%
-              </div>
+              <div style={{ fontFamily: "var(--mono)", fontSize: "0.85rem", color: src.color, fontWeight: 700 }}>{src.amount} HBAR</div>
+              <div style={{ fontFamily: "var(--mono)", fontSize: "0.75rem", color: "var(--text-dim)" }}>{src.pct}%</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Tier structure */}
-      <div style={{
-        background: "var(--bg2)", border: "1px solid var(--border)",
-        borderRadius: "16px", padding: "1.5rem", marginBottom: "1.5rem",
-      }}>
-        <h3 style={{ fontWeight: 700, marginBottom: "1.25rem" }}>Capital Structure</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          {tiers.map((t) => (
-            <div key={t.tier} style={{
-              background: "var(--bg3)", borderRadius: "12px", padding: "1rem",
-              borderLeft: `3px solid ${t.color}`,
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+      {/* Capital structure */}
+      <div style={{ ...s(), marginBottom: "1.5rem" }}>
+        <h3 style={{ fontWeight: 700, marginBottom: "1.25rem" }}>Capital Structure (3-tier)</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {tiers.map(t => (
+            <div key={t.tier} style={{ background: "var(--bg3)", borderRadius: 12, padding: "1rem", borderLeft: `3px solid ${t.color}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                 <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{t.tier}</div>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <span style={{
-                    fontSize: "0.7rem", fontFamily: "var(--mono)",
-                    background: "rgba(255,255,255,0.05)", borderRadius: "4px",
-                    padding: "2px 8px", color: "var(--text-dim)",
-                  }}>
-                    Risk: {t.risk}
-                  </span>
-                  <span style={{
-                    fontSize: "0.7rem", fontFamily: "var(--mono)",
-                    background: `${t.color}22`, borderRadius: "4px",
-                    padding: "2px 8px", color: t.color,
-                  }}>
-                    {t.return}
-                  </span>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <span style={{ fontSize: "0.68rem", fontFamily: "var(--mono)", background: "rgba(255,255,255,0.05)", borderRadius: 4, padding: "2px 8px", color: "var(--text-dim)" }}>Risk: {t.risk}</span>
+                  <span style={{ fontSize: "0.68rem", fontFamily: "var(--mono)", background: `${t.color}22`, borderRadius: 4, padding: "2px 8px", color: t.color }}>{t.return}</span>
                 </div>
               </div>
               <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>{t.desc}</div>
-              <div style={{
-                marginTop: "6px", fontSize: "0.75rem",
-                fontFamily: "var(--mono)", color: t.color,
-              }}>
-                {t.source}
-              </div>
+              <div style={{ marginTop: 6, fontSize: "0.72rem", fontFamily: "var(--mono)", color: t.color }}>{t.source}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Fund pool CTA */}
-      <div style={{
-        background: "var(--bg2)", border: "1px solid var(--border)",
-        borderRadius: "16px", padding: "1.5rem",
-      }}>
+      {/* CTA */}
+      <div style={s()}>
         <h3 style={{ fontWeight: 700, marginBottom: "0.5rem" }}>Fund the Pool</h3>
-        <p style={{ fontSize: "0.85rem", color: "var(--text-dim)", marginBottom: "1.25rem" }}>
-          Support climate resilience for smallholder farmers worldwide.
-        </p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+        <p style={{ fontSize: "0.85rem", color: "var(--text-dim)", marginBottom: "1.25rem" }}>Support climate resilience for smallholder farmers worldwide.</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
           {[
-            { label: "As ONG / Grant", color: "#60a5fa", desc: "Impact reporting on-chain" },
-            { label: "As ESG Investor", color: "#f59e0b", desc: "~12% yield + impact" },
-            { label: "As Farmer", color: "#22c55e", desc: "Via Telegram bot" },
-          ].map((cta) => (
-            <div key={cta.label} style={{
-              background: "var(--bg3)", borderRadius: "12px",
-              padding: "1rem", textAlign: "center",
-              border: `1px solid ${cta.color}33`,
-              cursor: "pointer",
-            }}>
-              <div style={{ fontWeight: 700, color: cta.color, marginBottom: "4px", fontSize: "0.85rem" }}>
-                {cta.label}
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>{cta.desc}</div>
-              <div style={{
-                marginTop: "10px", fontSize: "0.75rem", fontFamily: "var(--mono)",
-                color: cta.color, background: `${cta.color}22`,
-                borderRadius: "6px", padding: "4px 8px",
-              }}>
-                Contract: 0.0.8324067
-              </div>
+            { label: "As ONG / Grant", color: "#60a5fa", desc: "Impact reporting on-chain", fn: "fundAsONG()" },
+            { label: "As ESG Investor", color: "#f59e0b", desc: "~8% yield + impact", fn: "depositAsInvestor()" },
+            { label: "As Farmer", color: "#22c55e", desc: "Via @RainSafeHedera_bot", fn: "payPremium()" },
+          ].map(cta => (
+            <div key={cta.label} style={{ background: "var(--bg3)", borderRadius: 12, padding: "1rem", textAlign: "center", border: `1px solid ${cta.color}33` }}>
+              <div style={{ fontWeight: 700, color: cta.color, marginBottom: 4, fontSize: "0.85rem" }}>{cta.label}</div>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginBottom: 8 }}>{cta.desc}</div>
+              <div style={{ fontSize: "0.68rem", fontFamily: "var(--mono)", color: cta.color, background: `${cta.color}22`, borderRadius: 6, padding: "3px 8px" }}>{cta.fn}</div>
+              <div style={{ fontSize: "0.65rem", fontFamily: "var(--mono)", color: "var(--text-dim)", marginTop: 4 }}>{poolData.poolContractId}</div>
             </div>
           ))}
         </div>

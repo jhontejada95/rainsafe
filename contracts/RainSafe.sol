@@ -2,96 +2,111 @@
 pragma solidity ^0.8.20;
 
 /**
- * @title RainSafe
- * @notice Parametric climate insurance for small farmers
- * @dev Deployed on Hedera Smart Contract Service (EVM-compatible)
+ * RainSafe — Parametric Climate Insurance for Small Farmers
+ * Hedera Hello Future Apex Hackathon 2026
+ * Features: 3% protocol fee, 30-day carencia, dispute mechanism, C1+C3+C4 anti-fraud
  */
 contract RainSafe {
-
-    // ─── Structs ────────────────────────────────────────────────────────────
 
     struct Farm {
         address owner;
         string name;
-        string location;      // e.g. "Bogotá, Colombia"
+        string location;
         int64 latitude;
         int64 longitude;
-        uint256 coverageAmount; // in tinybars
+        uint256 coverageAmount;
+        uint256 premiumPaid;
         bool active;
         uint256 registeredAt;
+        uint256 coverageActivatesAt;
+        string walletAddress;
+        string parcelHash;
+        bool verified;
     }
 
     struct ClimateEvent {
         uint256 farmId;
-        string eventType;     // "drought" | "flood"
+        string eventType;
         uint256 triggeredAt;
         uint256 payoutAmount;
+        uint256 protocolFee;
         bool paid;
-        string hcsTopicId;    // reference to HCS record
+        string hcsTopicId;
     }
 
     struct ResilienceScore {
         uint256 farmId;
-        uint8 score;          // 0–100
+        uint8 score;
         uint256 eventsWeathered;
         uint256 totalPayoutsReceived;
         uint256 lastUpdated;
     }
 
-    // ─── State ───────────────────────────────────────────────────────────────
+    uint256 public constant PROTOCOL_FEE_BPS = 300;   // 3%
+    uint256 public constant BPS_DENOMINATOR = 10000;
+    uint256 public constant CARENCIA_DAYS = 30;        // 30-day waiting period
+    uint256 public constant MAX_COVERAGE_TINYBARS = 20000000000; // 200 HBAR in tinybars
 
     address public owner;
+    address public feeRecipient;
     uint256 public farmCount;
     uint256 public eventCount;
-
-    // Thresholds
-    uint8 public constant DROUGHT_THRESHOLD_MM = 5;   // < 5mm in 7 days
-    uint16 public constant FLOOD_THRESHOLD_MM = 150;  // > 150mm in 24h
+    uint256 public totalFeesCollected;
+    uint256 public totalPayouts;
 
     mapping(uint256 => Farm) public farms;
     mapping(uint256 => ClimateEvent) public climateEvents;
     mapping(uint256 => ResilienceScore) public resilienceScores;
     mapping(address => uint256[]) public farmerFarms;
+    mapping(string => bool) public registeredParcels;
 
-    // ─── Events ──────────────────────────────────────────────────────────────
-
-    event FarmRegistered(uint256 indexed farmId, address indexed owner, string location);
-    event ClimateEventTriggered(uint256 indexed farmId, string eventType, uint256 payoutAmount);
+    event FarmRegistered(uint256 indexed farmId, address indexed owner, string name, uint256 activatesAt);
+    event PremiumReceived(uint256 indexed farmId, uint256 premium, uint256 fee);
+    event ClimateEventTriggered(uint256 indexed farmId, string eventType, uint256 payout, uint256 fee);
     event PayoutExecuted(uint256 indexed farmId, address indexed farmer, uint256 amount);
     event ResilienceScoreUpdated(uint256 indexed farmId, uint8 newScore);
+    event FarmVerified(uint256 indexed farmId);
+    event DisputeRaised(uint256 indexed farmId, address indexed farmer, string reason);
 
-    // ─── Modifiers ───────────────────────────────────────────────────────────
-
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Not authorized");
-        _;
-    }
-
+    modifier onlyOwner() { require(msg.sender == owner, "Not authorized"); _; }
     modifier farmExists(uint256 farmId) {
         require(farmId < farmCount, "Farm does not exist");
-        require(farms[farmId].active, "Farm is not active");
+        require(farms[farmId].active, "Farm not active");
+        _;
+    }
+    modifier coverageActive(uint256 farmId) {
+        require(block.timestamp >= farms[farmId].coverageActivatesAt, "In carencia period");
         _;
     }
 
-    // ─── Constructor ─────────────────────────────────────────────────────────
-
-    constructor() {
+    constructor(address _feeRecipient) {
         owner = msg.sender;
+        feeRecipient = _feeRecipient;
     }
 
-    // ─── Core Functions ──────────────────────────────────────────────────────
-
-    /**
-     * @notice Register a new farm for climate insurance coverage
-     */
     function registerFarm(
         string memory _name,
         string memory _location,
+        string memory _parcelHash,
+        string memory _walletAddress,
         uint256 _coverageAmount
     ) external payable returns (uint256) {
-        require(msg.value >= _coverageAmount / 10, "Insufficient premium payment");
+        require(msg.value > 0, "Premium required");
+        require(!registeredParcels[_parcelHash], "Parcel already registered");
+        require(_coverageAmount <= MAX_COVERAGE_TINYBARS, "Coverage exceeds limit");
 
+        uint256 fee = (msg.value * PROTOCOL_FEE_BPS) / BPS_DENOMINATOR;
+        uint256 netPremium = msg.value - fee;
+
+        if (fee > 0 && feeRecipient != address(0)) {
+            (bool sent,) = feeRecipient.call{value: fee}("");
+            require(sent, "Fee transfer failed");
+        }
+
+        totalFeesCollected += fee;
+        uint256 activatesAt = block.timestamp + (CARENCIA_DAYS * 1 days);
         uint256 farmId = farmCount++;
+
         farms[farmId] = Farm({
             owner: msg.sender,
             name: _name,
@@ -99,103 +114,103 @@ contract RainSafe {
             latitude: 0,
             longitude: 0,
             coverageAmount: _coverageAmount,
+            premiumPaid: netPremium,
             active: true,
-            registeredAt: block.timestamp
+            registeredAt: block.timestamp,
+            coverageActivatesAt: activatesAt,
+            walletAddress: _walletAddress,
+            parcelHash: _parcelHash,
+            verified: false
         });
 
         farmerFarms[msg.sender].push(farmId);
+        registeredParcels[_parcelHash] = true;
 
         resilienceScores[farmId] = ResilienceScore({
-            farmId: farmId,
-            score: 50,
-            eventsWeathered: 0,
-            totalPayoutsReceived: 0,
-            lastUpdated: block.timestamp
+            farmId: farmId, score: 50, eventsWeathered: 0,
+            totalPayoutsReceived: 0, lastUpdated: block.timestamp
         });
 
-        emit FarmRegistered(farmId, msg.sender, _location);
+        emit FarmRegistered(farmId, msg.sender, _name, activatesAt);
+        emit PremiumReceived(farmId, netPremium, fee);
         return farmId;
     }
 
-    /**
-     * @notice Trigger a climate event payout (called by authorized monitor agent)
-     * @param _farmId Farm identifier
-     * @param _eventType "drought" or "flood"
-     * @param _hcsTopicId Reference to the HCS immutable record
-     */
+    function verifyFarm(uint256 farmId) external onlyOwner farmExists(farmId) {
+        farms[farmId].verified = true;
+        emit FarmVerified(farmId);
+    }
+
     function triggerClimateEvent(
         uint256 _farmId,
         string memory _eventType,
         string memory _hcsTopicId
-    ) external onlyOwner farmExists(_farmId) {
+    ) external onlyOwner farmExists(_farmId) coverageActive(_farmId) {
         Farm storage farm = farms[_farmId];
-        uint256 payout = farm.coverageAmount;
+        uint256 grossPayout = farm.coverageAmount;
+        uint256 fee = (grossPayout * PROTOCOL_FEE_BPS) / BPS_DENOMINATOR;
+        uint256 netPayout = grossPayout - fee;
 
-        require(address(this).balance >= payout, "Insufficient contract balance");
+        require(address(this).balance >= grossPayout, "Insufficient pool");
 
-        uint256 eventId = eventCount++;
-        climateEvents[eventId] = ClimateEvent({
-            farmId: _farmId,
-            eventType: _eventType,
-            triggeredAt: block.timestamp,
-            payoutAmount: payout,
-            paid: false,
-            hcsTopicId: _hcsTopicId
+        climateEvents[eventCount++] = ClimateEvent({
+            farmId: _farmId, eventType: _eventType,
+            triggeredAt: block.timestamp, payoutAmount: netPayout,
+            protocolFee: fee, paid: true, hcsTopicId: _hcsTopicId
         });
 
-        // Execute payout immediately
-        climateEvents[eventId].paid = true;
-        (bool success, ) = payable(farm.owner).call{value: payout}(""); require(success, "Payout failed");
+        totalPayouts += netPayout;
+        totalFeesCollected += fee;
 
-        // Update resilience score
-        _updateResilienceScore(_farmId, payout);
+        if (fee > 0 && feeRecipient != address(0)) {
+            (bool feeSent,) = feeRecipient.call{value: fee}("");
+            if (!feeSent) {}
+        }
 
-        emit ClimateEventTriggered(_farmId, _eventType, payout);
-        emit PayoutExecuted(_farmId, farm.owner, payout);
+        (bool payoutSent,) = payable(farm.owner).call{value: netPayout}("");
+        require(payoutSent, "Payout failed");
+
+        if (resilienceScores[_farmId].score > 10)
+            resilienceScores[_farmId].score -= 10;
+        resilienceScores[_farmId].eventsWeathered++;
+        resilienceScores[_farmId].lastUpdated = block.timestamp;
+
+        emit ClimateEventTriggered(_farmId, _eventType, netPayout, fee);
+        emit PayoutExecuted(_farmId, farm.owner, netPayout);
     }
 
-    /**
-     * @notice Update the AI-computed Climate Resilience Score
-     * @dev Called by the off-chain AI agent after analysis
-     */
-    function updateResilienceScore(
-        uint256 _farmId,
-        uint8 _score
-    ) external onlyOwner farmExists(_farmId) {
+    // Dispute mechanism — emits event for DAO governance
+    function raiseDispute(uint256 farmId, string memory reason) external farmExists(farmId) {
+        require(farms[farmId].owner == msg.sender, "Not farm owner");
+        emit DisputeRaised(farmId, msg.sender, reason);
+    }
+
+    function updateResilienceScore(uint256 _farmId, uint8 _score) external onlyOwner farmExists(_farmId) {
         resilienceScores[_farmId].score = _score;
         resilienceScores[_farmId].lastUpdated = block.timestamp;
         emit ResilienceScoreUpdated(_farmId, _score);
     }
 
-    // ─── Internal ────────────────────────────────────────────────────────────
+    function getFarm(uint256 farmId) external view returns (Farm memory) { return farms[farmId]; }
+    function getResilienceScore(uint256 farmId) external view returns (ResilienceScore memory) { return resilienceScores[farmId]; }
+    function getFarmerFarms(address farmer) external view returns (uint256[] memory) { return farmerFarms[farmer]; }
+    function getContractBalance() external view returns (uint256) { return address(this).balance; }
 
-    function _updateResilienceScore(uint256 _farmId, uint256 _payoutAmount) internal {
-        ResilienceScore storage rs = resilienceScores[_farmId];
-        rs.eventsWeathered += 1;
-        rs.totalPayoutsReceived += _payoutAmount;
-        rs.lastUpdated = block.timestamp;
-        // Basic score calculation — AI agent refines this off-chain
-        if (rs.score > 10) rs.score -= 5;
+    function getProtocolStats() external view returns (
+        uint256 totalFarms, uint256 totalEvents,
+        uint256 feesCollected, uint256 payoutsExecuted, uint256 poolBalance
+    ) {
+        return (farmCount, eventCount, totalFeesCollected, totalPayouts, address(this).balance);
     }
 
-    // ─── View Functions ──────────────────────────────────────────────────────
-
-    function getFarm(uint256 farmId) external view returns (Farm memory) {
-        return farms[farmId];
+    function getDaysUntilCoverageActive(uint256 farmId) external view returns (uint256) {
+        if (block.timestamp >= farms[farmId].coverageActivatesAt) return 0;
+        return (farms[farmId].coverageActivatesAt - block.timestamp) / 1 days;
     }
 
-    function getResilienceScore(uint256 farmId) external view returns (ResilienceScore memory) {
-        return resilienceScores[farmId];
+    function updateFeeRecipient(address _newRecipient) external onlyOwner {
+        feeRecipient = _newRecipient;
     }
 
-    function getFarmerFarms(address farmer) external view returns (uint256[] memory) {
-        return farmerFarms[farmer];
-    }
-
-    function getContractBalance() external view returns (uint256) {
-        return address(this).balance;
-    }
-
-    // Allow contract to receive HBAR
     receive() external payable {}
 }
