@@ -2,13 +2,6 @@
 import { useState } from "react";
 
 const POOL_CONTRACT_ADDRESS = "0x00000000000000000000000000000000007f1a40"; // 0.0.8329792
-const HEDERA_TESTNET = {
-  chainId: "0x128", // 296
-  chainName: "Hedera Testnet",
-  rpcUrls: ["https://testnet.hashio.io/api"],
-  nativeCurrency: { name: "HBAR", symbol: "HBAR", decimals: 18 },
-  blockExplorerUrls: ["https://hashscan.io/testnet"],
-};
 
 const POOL_ABI = [
   "function fundAsONG() payable",
@@ -18,21 +11,6 @@ const POOL_ABI = [
   "function pendingYield(address) view returns (uint256)",
 ];
 
-async function ensureHederaNetwork() {
-  try {
-    await window.ethereum.request({
-      method: "wallet_switchEthereumChain",
-      params: [{ chainId: HEDERA_TESTNET.chainId }],
-    });
-  } catch (e) {
-    if (e.code === 4902) {
-      await window.ethereum.request({
-        method: "wallet_addEthereumChain",
-        params: [HEDERA_TESTNET],
-      });
-    }
-  }
-}
 
 export default function PoolDashboard({ farms = [] }) {
   const [wallet, setWallet] = useState(null);
@@ -45,9 +23,6 @@ export default function PoolDashboard({ farms = [] }) {
       setTxStatus({ error: "MetaMask not found. Install it from metamask.io" });
       return;
     }
-    try {
-      await ensureHederaNetwork();
-    } catch (_) { /* network already added or user dismissed */ }
     try {
       const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
       setWallet(accounts[0]);
