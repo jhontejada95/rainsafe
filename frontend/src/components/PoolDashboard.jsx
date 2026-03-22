@@ -1,7 +1,11 @@
 // PoolDashboard.jsx v2 — with fee breakdown, carencia info, and MetaMask wallet
 import { useState } from "react";
 
-const POOL_CONTRACT_ADDRESS = "0x00000000000000000000000000000000007f1a40"; // 0.0.8329792
+const POOL_CONTRACT_ADDRESS =
+  import.meta.env.VITE_POOL_CONTRACT_ADDRESS ||
+  "0x00000000000000000000000000000000007f1a40"; // 0.0.8329792
+
+const POOL_GAS_LIMIT = 300_000;
 
 const HEDERA_TESTNET = {
   chainId: "0x128", // 296
@@ -74,8 +78,8 @@ export default function PoolDashboard({ farms = [] }) {
       const contract = new ethers.Contract(POOL_CONTRACT_ADDRESS, POOL_ABI, signer);
       const valueWei = amountHbar ? ethers.parseEther(amountHbar.toString()) : undefined;
       const tx = valueWei
-        ? await contract[fnName]({ value: valueWei, gasLimit: 300000 })
-        : await contract[fnName]({ gasLimit: 300000 });
+        ? await contract[fnName]({ value: valueWei, gasLimit: POOL_GAS_LIMIT })
+        : await contract[fnName]({ gasLimit: POOL_GAS_LIMIT });
       setTxStatus({ msg: "⏳ Transaction submitted..." });
       await tx.wait();
       setTxStatus({
@@ -106,8 +110,8 @@ export default function PoolDashboard({ farms = [] }) {
     totalPayouts: 200,
     totalFeesCollected: Math.round(totalFees + 18),
     activePolicies: activeFarms || 34,
-    poolContractId: "0.0.8329792",
-    coreContractId: "0.0.8324803",
+    poolContractId: import.meta.env.VITE_POOL_CONTRACT_ID || "0.0.8329792",
+    coreContractId: import.meta.env.VITE_CORE_CONTRACT_ID || "0.0.8329786",
   };
 
   const sources = [

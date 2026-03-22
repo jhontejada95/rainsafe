@@ -16,6 +16,12 @@ const crypto = require("crypto");
 
 require("dotenv").config();
 
+const GAS_REGISTER_FARM  = 800_000;
+const GAS_VERIFY_FARM    = 100_000;
+const GAS_RAISE_DISPUTE  = 400_000;
+const GAS_TRIGGER_PAYOUT = 500_000;
+const GAS_UPDATE_SCORE   = 200_000;
+
 function getClient() {
   const accountId = AccountId.fromString(process.env.HEDERA_ACCOUNT_ID);
   const privateKey = PrivateKey.fromStringECDSA(process.env.HEDERA_PRIVATE_KEY);
@@ -89,7 +95,7 @@ async function registerFarmOnChain(farmData) {
 
     const tx = await new ContractExecuteTransaction()
       .setContractId(process.env.CONTRACT_ID)
-      .setGas(800000)
+      .setGas(GAS_REGISTER_FARM)
       .setPayableAmount(Hbar.fromTinybars(premiumTinybars))
       .setFunction(
         "registerFarm",
@@ -139,7 +145,7 @@ async function verifyFarmOnChain(farmId) {
     const client = getClient();
     const tx = await new ContractExecuteTransaction()
       .setContractId(process.env.CONTRACT_ID)
-      .setGas(100000)
+      .setGas(GAS_VERIFY_FARM)
       .setFunction("verifyFarm", new ContractFunctionParameters().addUint256(farmId))
       .execute(client);
     const receipt = await tx.getReceipt(client);
@@ -157,7 +163,7 @@ async function raiseDisputeOnChain(farmId, reason) {
     const client = getClient();
     const tx = await new ContractExecuteTransaction()
       .setContractId(process.env.CONTRACT_ID)
-      .setGas(400000)
+      .setGas(GAS_RAISE_DISPUTE)
       .setFunction("raiseDispute",
         new ContractFunctionParameters().addUint256(farmId).addString(reason))
       .execute(client);
@@ -177,7 +183,7 @@ async function triggerPayout(farmId, eventType, hcsTopicId) {
     const client = getClient();
     const tx = await new ContractExecuteTransaction()
       .setContractId(process.env.CONTRACT_ID)
-      .setGas(500000)
+      .setGas(GAS_TRIGGER_PAYOUT)
       .setFunction("triggerClimateEvent",
         new ContractFunctionParameters()
           .addUint256(farmId)
@@ -219,9 +225,9 @@ async function updateResilienceScore(farmId, score) {
   if (!process.env.CONTRACT_ID) return;
   try {
     const client = getClient();
-    const tx = await new ContractExecuteTransaction()
+    await new ContractExecuteTransaction()
       .setContractId(process.env.CONTRACT_ID)
-      .setGas(200000)
+      .setGas(GAS_UPDATE_SCORE)
       .setFunction("updateResilienceScore",
         new ContractFunctionParameters().addUint256(farmId).addUint8(score))
       .execute(client);
