@@ -282,7 +282,7 @@ export default function PoolDashboard({ farms = [] }) {
             >
               via Telegram bot
             </button>
-            <div style={{ fontSize: "0.62rem", fontFamily: "var(--mono)", color: "var(--text-dim)", marginTop: 6 }}>0.0.8329792</div>
+            <div style={{ fontSize: "0.62rem", fontFamily: "var(--mono)", color: "var(--text-dim)", marginTop: 6 }}>{poolData.poolContractId}</div>
           </div>
         </div>
         <p style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontFamily: "var(--mono)", marginTop: "1rem", textAlign: "center" }}>
