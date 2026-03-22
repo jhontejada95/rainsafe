@@ -47,15 +47,19 @@ export default function PoolDashboard({ farms = [] }) {
     }
     try {
       await ensureHederaNetwork();
+    } catch (_) { /* network already added or user dismissed */ }
+    try {
       const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
       setWallet(accounts[0]);
       setTxStatus(null);
-      // Check pending yield
-      const { ethers } = await import("ethers");
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const contract = new ethers.Contract(POOL_CONTRACT_ADDRESS, POOL_ABI, provider);
-      const yieldWei = await contract.pendingYield(accounts[0]);
-      setPendingYield(Number(ethers.formatEther(yieldWei)).toFixed(4));
+      // Check pending yield (best-effort — RPC may be unavailable)
+      try {
+        const { ethers } = await import("ethers");
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const contract = new ethers.Contract(POOL_CONTRACT_ADDRESS, POOL_ABI, provider);
+        const yieldWei = await contract.pendingYield(accounts[0]);
+        setPendingYield(Number(ethers.formatEther(yieldWei)).toFixed(4));
+      } catch (_) { /* yield read unavailable, skip */ }
     } catch (e) {
       setTxStatus({ error: e.message });
     }
