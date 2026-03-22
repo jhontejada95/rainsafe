@@ -51,8 +51,8 @@ export default function PoolDashboard({ farms = [] }) {
       const contract = new ethers.Contract(POOL_CONTRACT_ADDRESS, POOL_ABI, signer);
       const valueWei = amountHbar ? ethers.parseEther(amountHbar.toString()) : undefined;
       const tx = valueWei
-        ? await contract[fnName]({ value: valueWei })
-        : await contract[fnName]();
+        ? await contract[fnName]({ value: valueWei, gasLimit: 300000 })
+        : await contract[fnName]({ gasLimit: 300000 });
       setTxStatus({ msg: "⏳ Transaction submitted..." });
       await tx.wait();
       setTxStatus({
