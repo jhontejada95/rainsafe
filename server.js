@@ -6,7 +6,7 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const cors = require("cors");
-const { raiseDisputeOnChain, registerFarmOnChain } = require("./agent/hedera");
+const { raiseDisputeOnChain, registerFarmOnChain, getFarmCount } = require("./agent/hedera");
 
 const app = express();
 app.use(cors());
@@ -146,16 +146,23 @@ app.post("/api/disputes", async (req, res) => {
     hashscanUrl: null,
   };
 
-  // Try to record on-chain
-  const onChainId = parseInt(farmId) || 0;
-  try {
-    const result = await raiseDisputeOnChain(onChainId, reason);
-    if (result) {
-      dispute.txId = result.txId;
-      dispute.hashscanUrl = result.hashscanUrl;
+  // Try to record on-chain — validate farmId < farmCount first to avoid CONTRACT_REVERT
+  const onChainId = parseInt(farmId);
+  if (!isNaN(onChainId)) {
+    try {
+      const farmCount = await getFarmCount();
+      if (farmCount !== null && onChainId >= farmCount) {
+        console.warn(`⚠️  Dispute farmId ${onChainId} >= farmCount ${farmCount}, skipping on-chain call`);
+      } else {
+        const result = await raiseDisputeOnChain(onChainId, reason);
+        if (result) {
+          dispute.txId = result.txId;
+          dispute.hashscanUrl = result.hashscanUrl;
+        }
+      }
+    } catch (e) {
+      console.warn("On-chain dispute skipped:", e.message);
     }
-  } catch (e) {
-    console.warn("On-chain dispute skipped:", e.message);
   }
 
   const disputes = readDisputes();
