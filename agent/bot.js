@@ -347,11 +347,11 @@ bot.on("message", async (msg) => {
     if (chainResult) {
       farm.txId = chainResult.txId;
       farm.hashscanUrl = chainResult.hashscanUrl;
+      farm.onChainId = chainResult.onChainId ?? null;
     }
 
     // Save locally
-    const idx = saveFarm(farm);
-    farm.onChainId = idx;
+    saveFarm(farm);
     delete sessions[chatId];
 
     // Notify API server

@@ -9,6 +9,7 @@ const {
   TopicCreateTransaction,
   TopicMessageSubmitTransaction,
   ContractExecuteTransaction,
+  ContractCallQuery,
   ContractFunctionParameters,
   Hbar,
 } = require("@hashgraph/sdk");
@@ -134,12 +135,33 @@ async function registerFarmOnChain(farmData) {
       });
     }
 
-    return { txId, hashscanUrl, status: receipt.status.toString(), parcelHash };
+    // Read the actual farmId assigned by the contract (farmCount - 1)
+    let onChainId = null;
+    try {
+      const count = await getFarmCount();
+      onChainId = count - 1;
+      console.log(`   🆔 On-chain farmId: ${onChainId}`);
+    } catch (e) {
+      console.warn(`   ⚠️  Could not read farmCount: ${e.message}`);
+    }
+
+    return { txId, hashscanUrl, status: receipt.status.toString(), parcelHash, onChainId };
 
   } catch (err) {
     console.error(`❌ On-chain registration failed: ${err.message}`);
     return null;
   }
+}
+
+async function getFarmCount() {
+  if (!process.env.CONTRACT_ID) return null;
+  const client = getClient();
+  const result = await new ContractCallQuery()
+    .setContractId(process.env.CONTRACT_ID)
+    .setGas(30_000)
+    .setFunction("farmCount")
+    .execute(client);
+  return result.getUint256(0).toNumber();
 }
 
 async function verifyFarmOnChain(farmId) {
@@ -250,4 +272,5 @@ module.exports = {
   raiseDisputeOnChain,
   triggerPayout,
   updateResilienceScore,
+  getFarmCount,
 };
