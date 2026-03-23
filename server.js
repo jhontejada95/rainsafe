@@ -75,8 +75,18 @@ app.post("/api/farms", async (req, res) => {
     ...req.body,
     registeredAt: new Date().toISOString(),
   };
-  farms.push(farm);
-  writeFarms(farms);
+
+  // Bot already wrote to farms.json via saveFarm() — skip duplicate push
+  const existingIdx = farm.parcelHash
+    ? farms.findIndex(f => f.parcelHash === farm.parcelHash)
+    : -1;
+  if (existingIdx !== -1) {
+    farms[existingIdx] = { ...farms[existingIdx], ...farm };
+    writeFarms(farms);
+  } else {
+    farms.push(farm);
+    writeFarms(farms);
+  }
 
   // If coming from dashboard (no txId yet), register on-chain
   if (!farm.txId && farm.source === "dashboard") {
